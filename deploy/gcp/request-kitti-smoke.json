@@ -1,0 +1,11 @@
+{
+  "dataset_type": "kitti",
+  "release": "object",
+  "split": "smoke",
+  "max_frames": 5,
+  "modalities": ["camera", "labels", "calibration", "lidar"],
+  "source": "official",
+  "requested_by": "team",
+  "publish": true,
+  "run_id": "kitti-smoke"
+}

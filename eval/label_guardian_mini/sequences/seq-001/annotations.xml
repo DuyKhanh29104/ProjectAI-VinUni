@@ -1,0 +1,191 @@
+<?xml version='1.0' encoding='utf-8'?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <task>
+      <id>0</id>
+      <name>Label Guardian Mini / seq-001</name>
+      <size>6</size>
+      <mode>annotation</mode>
+      <overlap>0</overlap>
+      <bugtracker />
+      <flipped>False</flipped>
+      <created>2026-08-09T00:00:00Z</created>
+      <updated>2026-08-09T00:00:00Z</updated>
+      <labels>
+        <label>
+          <name>car</name>
+          <color>#2563EB</color>
+          <type>rectangle</type>
+          <attributes>
+            <attribute>
+              <name>track_id</name>
+              <mutable>True</mutable>
+              <input_type>text</input_type>
+              <default_value />
+              <values />
+            </attribute>
+          </attributes>
+        </label>
+        <label>
+          <name>pedestrian</name>
+          <color>#16A34A</color>
+          <type>rectangle</type>
+          <attributes>
+            <attribute>
+              <name>track_id</name>
+              <mutable>True</mutable>
+              <input_type>text</input_type>
+              <default_value />
+              <values />
+            </attribute>
+          </attributes>
+        </label>
+        <label>
+          <name>cyclist</name>
+          <color>#9333EA</color>
+          <type>rectangle</type>
+          <attributes>
+            <attribute>
+              <name>track_id</name>
+              <mutable>True</mutable>
+              <input_type>text</input_type>
+              <default_value />
+              <values />
+            </attribute>
+          </attributes>
+        </label>
+        <label>
+          <name>traffic_sign</name>
+          <color>#EA580C</color>
+          <type>rectangle</type>
+          <attributes>
+            <attribute>
+              <name>track_id</name>
+              <mutable>True</mutable>
+              <input_type>text</input_type>
+              <default_value />
+              <values />
+            </attribute>
+          </attributes>
+        </label>
+      </labels>
+      <segments>
+        <segment>
+          <id>0</id>
+          <start>0</start>
+          <stop>5</stop>
+          <url />
+        </segment>
+      </segments>
+      <owner>
+        <username>fixture</username>
+        <email />
+      </owner>
+      <assignee />
+    </task>
+    <dumped>2026-08-09T00:00:00Z</dumped>
+  </meta>
+  <image id="0" name="frame_0000.png" width="1280" height="720">
+    <box label="traffic_sign" source="manual" occluded="0" xtl="110" ytl="184" xbr="182" ybr="316" z_order="0">
+      <attribute name="track_id">seq001-sign-main</attribute>
+    </box>
+    <box label="car" source="manual" occluded="0" xtl="230" ytl="430" xbr="408" ybr="534" z_order="0">
+      <attribute name="track_id">seq001-car-main</attribute>
+    </box>
+    <box label="car" source="manual" occluded="0" xtl="720" ytl="448" xbr="874" ybr="540" z_order="0">
+      <attribute name="track_id">seq001-car-right</attribute>
+    </box>
+    <box label="pedestrian" source="manual" occluded="0" xtl="932" ytl="346" xbr="990" ybr="516" z_order="0">
+      <attribute name="track_id">seq001-person-main</attribute>
+    </box>
+    <box label="cyclist" source="manual" occluded="0" xtl="1050" ytl="405" xbr="1168" ybr="543" z_order="0">
+      <attribute name="track_id">seq001-cyclist-main</attribute>
+    </box>
+  </image>
+  <image id="1" name="frame_0001.png" width="1280" height="720">
+    <box label="traffic_sign" source="manual" occluded="0" xtl="110" ytl="184" xbr="182" ybr="316" z_order="0">
+      <attribute name="track_id">seq001-sign-main</attribute>
+    </box>
+    <box label="car" source="manual" occluded="0" xtl="250" ytl="430" xbr="428" ybr="534" z_order="0">
+      <attribute name="track_id">seq001-car-main</attribute>
+    </box>
+    <box label="car" source="manual" occluded="0" xtl="706" ytl="448" xbr="860" ybr="540" z_order="0">
+      <attribute name="track_id">seq001-car-right</attribute>
+    </box>
+    <box label="pedestrian" source="manual" occluded="0" xtl="924" ytl="346" xbr="982" ybr="516" z_order="0">
+      <attribute name="track_id">seq001-person-main</attribute>
+    </box>
+    <box label="cyclist" source="manual" occluded="0" xtl="1038" ytl="405" xbr="1156" ybr="543" z_order="0">
+      <attribute name="track_id">seq001-cyclist-main</attribute>
+    </box>
+  </image>
+  <image id="2" name="frame_0002.png" width="1280" height="720">
+    <box label="traffic_sign" source="manual" occluded="0" xtl="110" ytl="184" xbr="182" ybr="316" z_order="0">
+      <attribute name="track_id">seq001-sign-main</attribute>
+    </box>
+    <box label="car" source="manual" occluded="0" xtl="270" ytl="430" xbr="448" ybr="534" z_order="0">
+      <attribute name="track_id">seq001-car-main</attribute>
+    </box>
+    <box label="car" source="manual" occluded="0" xtl="692" ytl="448" xbr="846" ybr="540" z_order="0">
+      <attribute name="track_id">seq001-car-right</attribute>
+    </box>
+    <box label="pedestrian" source="manual" occluded="0" xtl="916" ytl="346" xbr="974" ybr="516" z_order="0">
+      <attribute name="track_id">seq001-person-main</attribute>
+    </box>
+    <box label="cyclist" source="manual" occluded="0" xtl="1026" ytl="405" xbr="1144" ybr="543" z_order="0">
+      <attribute name="track_id">seq001-cyclist-main</attribute>
+    </box>
+  </image>
+  <image id="3" name="frame_0003.png" width="1280" height="720">
+    <box label="traffic_sign" source="manual" occluded="0" xtl="110" ytl="184" xbr="182" ybr="316" z_order="0">
+      <attribute name="track_id">seq001-sign-main</attribute>
+    </box>
+    <box label="car" source="manual" occluded="0" xtl="290" ytl="430" xbr="468" ybr="534" z_order="0">
+      <attribute name="track_id">seq001-car-main</attribute>
+    </box>
+    <box label="car" source="manual" occluded="0" xtl="678" ytl="448" xbr="832" ybr="540" z_order="0">
+      <attribute name="track_id">seq001-car-right</attribute>
+    </box>
+    <box label="pedestrian" source="manual" occluded="0" xtl="908" ytl="346" xbr="966" ybr="516" z_order="0">
+      <attribute name="track_id">seq001-person-main</attribute>
+    </box>
+    <box label="cyclist" source="manual" occluded="0" xtl="1014" ytl="405" xbr="1132" ybr="543" z_order="0">
+      <attribute name="track_id">seq001-cyclist-main</attribute>
+    </box>
+  </image>
+  <image id="4" name="frame_0004.png" width="1280" height="720">
+    <box label="traffic_sign" source="manual" occluded="0" xtl="110" ytl="184" xbr="182" ybr="316" z_order="0">
+      <attribute name="track_id">seq001-sign-main</attribute>
+    </box>
+    <box label="car" source="manual" occluded="0" xtl="310" ytl="430" xbr="488" ybr="534" z_order="0">
+      <attribute name="track_id">seq001-car-main</attribute>
+    </box>
+    <box label="car" source="manual" occluded="0" xtl="664" ytl="448" xbr="818" ybr="540" z_order="0">
+      <attribute name="track_id">seq001-car-right</attribute>
+    </box>
+    <box label="pedestrian" source="manual" occluded="0" xtl="900" ytl="346" xbr="958" ybr="516" z_order="0">
+      <attribute name="track_id">seq001-person-main</attribute>
+    </box>
+    <box label="cyclist" source="manual" occluded="0" xtl="1002" ytl="405" xbr="1120" ybr="543" z_order="0">
+      <attribute name="track_id">seq001-cyclist-main</attribute>
+    </box>
+  </image>
+  <image id="5" name="frame_0005.png" width="1280" height="720">
+    <box label="traffic_sign" source="manual" occluded="0" xtl="110" ytl="184" xbr="182" ybr="316" z_order="0">
+      <attribute name="track_id">seq001-sign-main</attribute>
+    </box>
+    <box label="car" source="manual" occluded="0" xtl="330" ytl="430" xbr="508" ybr="534" z_order="0">
+      <attribute name="track_id">seq001-car-main</attribute>
+    </box>
+    <box label="car" source="manual" occluded="0" xtl="650" ytl="448" xbr="804" ybr="540" z_order="0">
+      <attribute name="track_id">seq001-car-right</attribute>
+    </box>
+    <box label="pedestrian" source="manual" occluded="0" xtl="892" ytl="346" xbr="950" ybr="516" z_order="0">
+      <attribute name="track_id">seq001-person-main</attribute>
+    </box>
+    <box label="cyclist" source="manual" occluded="0" xtl="990" ytl="405" xbr="1108" ybr="543" z_order="0">
+      <attribute name="track_id">seq001-cyclist-main</attribute>
+    </box>
+  </image>
+</annotations>

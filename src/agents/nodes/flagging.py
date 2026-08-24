@@ -1,0 +1,168 @@
+from src.agents.geometry import iou
+from src.agents.state import LabelQAState
+
+# Prediction có confidence >= ngưỡng này mà không có label nào gần đó
+# -> nghi ngờ mạnh là bị thiếu nhãn (annotator bỏ sót).
+MISSING_LABEL_CONF_HIGH = 0.6
+# Dưới ngưỡng này thì coi model cũng không đủ chắc chắn để nghi ngờ.
+MISSING_LABEL_CONF_LOW = 0.25
+
+# best_iou >= ngưỡng này giữa gt/pred không match được coi là "có liên hệ"
+# (cùng một vật thể nhưng bbox lệch), thay vì "không liên quan gì nhau".
+BBOX_MISALIGN_IOU_MIN = 0.1
+
+# Hai gt_label cùng class chồng lên nhau với IoU >= ngưỡng này -> nghi trùng nhãn.
+DUPLICATE_GT_IOU_THRESHOLD = 0.8
+
+# Match có iou dưới ngưỡng này (dù đã pass IOU_MATCH_THRESHOLD và đúng class)
+# vẫn coi là bbox vẽ lỏng, không khít quanh vật thể -> nghi vấn nhẹ.
+LOOSE_BBOX_IOU_MAX = 0.85
+
+# Diện tích GT (px^2) dưới ngưỡng này coi là "vật thể nhỏ" (theo quy ước COCO:
+# small = area < 32*32). Với vật thể nhỏ, lệch vài pixel đã kéo IoU giảm mạnh
+# hơn nhiều so với vật thể lớn cùng độ lệch tuyệt đối -> loose_bbox trên vật thể
+# nhỏ thường là nhiễu do độ nhạy IoU, không hẳn là annotator vẽ ẩu. Issue vẫn
+# được tạo ra (không bị xoá, vẫn "ghi nhận" để audit) nhưng đánh dấu
+# blocking=False để không tự động đẩy status ảnh lên "needs_review".
+SMALL_OBJECT_AREA_MAX = 32 * 32
+
+
+def flag_issues(
+    matches: list[dict],
+    unmatched_gt: list[dict],
+    unmatched_pred: list[dict],
+    gt_labels: list[dict],
+) -> list[dict]:
+    """Áp dụng rule dựa trên số liệu matching để gắn cờ nghi vấn.
+
+    Đây là bước quyết định (issue_type, severity) hoàn toàn bằng code dựa
+    trên số liệu — LLM ở node sau chỉ diễn giải/đề xuất fix cho các issue
+    đã được xác định ở đây, không được tự ý đổi loại lỗi hay mức độ.
+
+    Hàm thuần (không đụng LabelQAState) để dễ test độc lập — xem flag_issues_node bên dưới.
+    """
+    issues: list[dict] = []
+    gt_by_id = {gt["label_id"]: gt for gt in gt_labels}
+    matched_gt_ids = {m["gt_id"] for m in matches}
+
+    # 0. Phát hiện duplicate trước (để bước 3 bên dưới biết bỏ qua box nào đã
+    #    được giải thích bởi duplicate_label). Khi 2 box GT trùng lặp cùng 1 vật
+    #    thể nhưng chỉ có 1 prediction, Hungarian matching chỉ match được 1 trong
+    #    2 (tối đa hoá tổng IoU toàn cục, 1-1). Box duplicate còn lại thành
+    #    unmatched_gt, và vì nó overlap cao với chính box đã match (cùng vật thể)
+    #    nên best_iou của nó với prediction cũng cao -> bị bbox_misaligned gắn cờ
+    #    thêm dù không hề lệch vị trí, chỉ là bản sao thừa. redundant_unmatched_ids
+    #    đánh dấu các box này để bước 3 bỏ qua, tránh double-flag 1 lỗi thành 2.
+    duplicate_issues: list[dict] = []
+    redundant_unmatched_ids: set[str] = set()
+    for i in range(len(gt_labels)):
+        for j in range(i + 1, len(gt_labels)):
+            a, b = gt_labels[i], gt_labels[j]
+            if a["class_name"] != b["class_name"]:
+                continue
+            if iou(a["bbox"], b["bbox"]) < DUPLICATE_GT_IOU_THRESHOLD:
+                continue
+            duplicate_issues.append(
+                {
+                    "label_id": a["label_id"],
+                    "issue_type": "duplicate_label",
+                    "severity": "medium",
+                    "evidence": {"label_a": a["label_id"], "label_b": b["label_id"]},
+                    "blocking": True,
+                }
+            )
+            a_matched, b_matched = a["label_id"] in matched_gt_ids, b["label_id"] in matched_gt_ids
+            if a_matched and not b_matched:
+                redundant_unmatched_ids.add(b["label_id"])
+            elif b_matched and not a_matched:
+                redundant_unmatched_ids.add(a["label_id"])
+
+    # 1. Khớp vị trí tốt nhưng sai class
+    for m in matches:
+        if not m["class_match"]:
+            issues.append(
+                {
+                    "label_id": m["gt_id"],
+                    "issue_type": "wrong_class",
+                    "severity": "high" if m["iou"] >= 0.85 else "medium",
+                    "evidence": m,
+                    "blocking": True,
+                }
+            )
+        elif m["iou"] < LOOSE_BBOX_IOU_MAX:
+            # Match hợp lệ, đúng class, nhưng bbox không khít quanh vật thể
+            # (vd GT vẽ lỏng/thừa nền) -> vẫn đáng nghi dù không đủ nặng để
+            # tính là bbox_misaligned (case đó dành cho match thất bại hẳn).
+            gt = gt_by_id.get(m["gt_id"])
+            bbox = gt["bbox"] if gt else None
+            area = (bbox["x2"] - bbox["x1"]) * (bbox["y2"] - bbox["y1"]) if bbox else None
+            is_small = area is not None and area < SMALL_OBJECT_AREA_MAX
+            issues.append(
+                {
+                    "label_id": m["gt_id"],
+                    "issue_type": "loose_bbox",
+                    "severity": "low",
+                    "evidence": m,
+                    # Vật thể nhỏ: vẫn ghi nhận issue nhưng không chặn status
+                    # "needs_review" (xem SMALL_OBJECT_AREA_MAX ở trên).
+                    "blocking": not is_small,
+                }
+            )
+
+    # 2. Model phát hiện vật thể tự tin nhưng không có label nào gần đó -> nghi thiếu nhãn
+    for pred in unmatched_pred:
+        if pred["best_iou"] >= BBOX_MISALIGN_IOU_MIN:
+            continue  # đã có gt gần đó, xử lý ở nhánh bbox_misaligned từ phía gt
+        if pred["confidence"] >= MISSING_LABEL_CONF_HIGH:
+            severity = "high"
+        elif pred["confidence"] >= MISSING_LABEL_CONF_LOW:
+            severity = "low"
+        else:
+            continue
+        issues.append(
+            {
+                "label_id": None,
+                "issue_type": "missing_label",
+                "severity": severity,
+                "evidence": pred,
+                "blocking": True,
+            }
+        )
+
+    # 3. Label không khớp bất kỳ prediction nào
+    for gt in unmatched_gt:
+        if gt["label_id"] in redundant_unmatched_ids:
+            continue  # đã giải thích bằng duplicate_label ở bước 0, không double-flag
+        if gt["best_iou"] >= BBOX_MISALIGN_IOU_MIN:
+            issues.append(
+                {
+                    "label_id": gt["label_id"],
+                    "issue_type": "bbox_misaligned",
+                    "severity": "medium",
+                    "evidence": gt,
+                    "blocking": True,
+                }
+            )
+        else:
+            issues.append(
+                {
+                    "label_id": gt["label_id"],
+                    "issue_type": "extra_or_wrong_label",
+                    "severity": "medium",
+                    "evidence": gt,
+                    "blocking": True,
+                }
+            )
+
+    # 4. Hai gt_label trùng lặp (cùng class, overlap gần như hoàn toàn) — đã tính ở bước 0
+    issues += duplicate_issues
+
+    return issues
+
+
+async def flag_issues_node(state: LabelQAState) -> dict:
+    matches = state.get("matches", [])
+    unmatched_gt = state.get("unmatched_gt", [])
+    unmatched_pred = state.get("unmatched_pred", [])
+    gt_labels = state.get("gt_labels", [])
+    return {"flagged_issues": flag_issues(matches, unmatched_gt, unmatched_pred, gt_labels)}

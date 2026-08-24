@@ -1,0 +1,80 @@
+# Python
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Cloud credentials must stay outside the repository.
+.gcloud/
+application_default_credentials.json
+*service-account*.json
+*service_account*.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data is local-only runtime/input storage; keep it out of Git.
+data/
+/kitti/
+/nuscenes/
+*.db
+*.sqlite3
+
+# Model weights are downloaded at runtime; publish them through artifact storage/DVC instead.
+*.pt
+weights/
+runs/
+
+# Frontend mock data is source code, not runtime dataset storage.
+!frontend/src/data/
+!frontend/src/data/**
+
+# Logs
+logs/
+*.log
+
+# Test coverage
+htmlcov/
+.coverage
+coverage.xml
+
+# Docker
+docker-compose.override.yml
+
+# Node (frontend)
+node_modules/
+.next/
+out/
+.nuxt/
+
+# Build
+*.pyc
+*.pyo
+
+# AI logs — tracked structure, ignored content
+.ai-log/*.jsonl
+.ai-log/archive/

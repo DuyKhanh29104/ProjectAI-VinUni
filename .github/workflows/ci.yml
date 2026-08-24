@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend lint, migration, tests, and coverage
+    runs-on: [self-hosted, linux, x64]
+
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: label_guardian_migration_test
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -U postgres -d label_guardian_migration_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      APP_ENV: test
+      OPENAI_API_KEY: test-key
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
+          python -m pip install -e ".[agent-yolo,ingestion]" --group dev
+
+      - name: Lint backend
+        run: >-
+          python -m ruff check
+          src/
+          tests/
+          migrations/
+          scripts/check_migrations.py
+          scripts/check_openapi.py
+          scripts/label_guardian_*.py
+          --output-format=github
+
+      - name: Typecheck backend
+        run: python -m mypy src/
+
+      - name: Check OpenAPI contract drift
+        run: python scripts/check_openapi.py
+
+      - name: Validate DVC repository
+        run: python -m dvc doctor
+
+      - name: Validate database migration lifecycle
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/label_guardian_migration_test
+        run: python scripts/check_migrations.py
+
+      - name: Run backend tests with coverage
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/label_guardian_migration_test
+          TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/label_guardian_migration_test
+          LABEL_GUARDIAN_DATABASE_URL: postgresql+psycopg://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/label_guardian_migration_test
+        run: >-
+          python -m pytest tests/
+          -v
+          --tb=short
+          --cov=src
+          --cov-report=xml
+          --cov-report=term-missing
+
+      - name: Upload backend coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage.xml
+          if-no-files-found: ignore
+
+  frontend:
+    name: Frontend tests, typecheck, and build
+    runs-on: [self-hosted, linux, x64]
+
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run frontend tests
+        run: npm test
+
+      - name: Typecheck frontend
+        run: npm run typecheck
+
+      - name: Build frontend
+        run: npm run build
+
+  docker:
+    name: Build backend Docker image
+    runs-on: [self-hosted, linux, x64]
+    needs: [backend, frontend]
+
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image without pushing
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: p-209:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke-test production runtime dependencies
+        run: >-
+          docker run --rm
+          p-209:${{ github.sha }}
+          python -c "import os, torch, ultralytics; from pathlib import Path; from src.main import app; assert app is not None and '+cpu' in torch.__version__ and Path(os.environ['YOLO_MODEL_NAME']).is_file()"

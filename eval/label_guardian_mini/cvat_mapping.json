@@ -1,0 +1,30 @@
+{
+  "datasetId": "label-guardian-mini",
+  "datasetVersion": "1.0",
+  "baseUrl": "https://app.cvat.ai",
+  "projectId": 433367,
+  "sequences": {
+    "seq-001": {
+      "taskId": 2501081,
+      "taskName": "Label Guardian Mini / seq-001",
+      "jobs": [
+        {
+          "id": 4342385,
+          "startFrame": 0,
+          "stopFrame": 5
+        }
+      ]
+    },
+    "seq-002": {
+      "taskId": 2501083,
+      "taskName": "Label Guardian Mini / seq-002",
+      "jobs": [
+        {
+          "id": 4342388,
+          "startFrame": 0,
+          "stopFrame": 5
+        }
+      ]
+    }
+  }
+}

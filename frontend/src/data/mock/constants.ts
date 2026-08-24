@@ -1,0 +1,1 @@
+export const mockTimestamp = "2026-08-06T08:00:00.000Z";

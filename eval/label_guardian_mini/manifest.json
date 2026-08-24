@@ -1,0 +1,23 @@
+{
+  "id": "label-guardian-mini",
+  "version": "1.0",
+  "imageWidth": 1280,
+  "imageHeight": 720,
+  "sequenceCount": 2,
+  "framesPerSequence": 6,
+  "totalFrames": 12,
+  "classes": [
+    "car",
+    "pedestrian",
+    "cyclist",
+    "traffic_sign"
+  ],
+  "intentionalErrorTypes": [
+    "box_misalignment",
+    "wrong_class",
+    "missing_object",
+    "duplicate_annotation",
+    "track_id_switch",
+    "track_break"
+  ]
+}

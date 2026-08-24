@@ -1,0 +1,104 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "label-guardian"
+version = "0.1.0"
+description = "AI20K quality-assurance agent API"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.14,<2",
+    "asyncpg>=0.30,<1",
+    "fastapi>=0.141.1,<0.142",
+    "httpx>=0.28,<1",
+    "langchain>=0.3.0",
+    "langchain-openai>=0.3.0",
+    "langgraph>=0.2.0",
+    "numpy>=1.26,<3",
+    "pillow>=11.1,<13",
+    "pyjwt[crypto]>=2.10,<3",
+    "pydantic>=2.10,<3",
+    "pydantic-settings>=2.7,<3",
+    "python-dotenv>=1.0,<2",
+    "scipy>=1.13,<2",
+    "sqlalchemy>=2.0,<3",
+    "uvicorn[standard]>=0.34,<1",
+]
+
+[project.optional-dependencies]
+cloud = [
+    "google-cloud-storage>=2.18,<4",
+]
+agent = [
+    "langchain-google-genai>=2,<5",
+]
+agent-yolo = [
+    "langchain-google-genai>=2,<5",
+    # Lazily loaded by the API when a reviewer requests Agent evaluation.
+    "ultralytics>=8.4,<9",
+]
+ingestion = [
+    "boto3>=1.35,<2",
+    "google-cloud-storage>=2.18,<4",
+    "playwright>=1.45,<2",
+    "psycopg[binary]>=3.2,<4",
+]
+
+[dependency-groups]
+test = [
+    "moto[s3]>=5,<6",
+    "psycopg[binary]>=3.2,<4",
+    "pytest>=8,<10",
+    "pytest-asyncio>=0.24,<2",
+    "pytest-cov>=6,<8",
+]
+quality = [
+    "mypy>=1.14,<2",
+    "ruff>=0.8,<1",
+]
+dvc = [
+    "dvc>=3,<4",
+]
+dev = [
+    { include-group = "test" },
+    { include-group = "quality" },
+    { include-group = "dvc" },
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src", "src.*"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+# The top-level alembic.ini can otherwise make Alembic look first-party on
+# some platforms, producing different import groups locally and in CI.
+known-third-party = ["alembic"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src"]
+check_untyped_defs = true
+disallow_untyped_defs = true
+follow_imports = "skip"
+no_implicit_optional = true
+warn_return_any = true
+warn_unused_configs = true

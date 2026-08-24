@@ -1,0 +1,16 @@
+services:
+  # Keep the local database available as an explicit fallback, but do not start
+  # it when this override is used.
+  postgres:
+    profiles: ["local-postgres"]
+
+  backend:
+    restart: "no"
+    environment:
+      # A shared database has one migration owner. Web containers only verify
+      # that the committed Alembic head has already been applied.
+      RUN_MIGRATIONS: "false"
+      DATABASE_URL: "${DATABASE_URL:?Set DATABASE_URL to the Supabase PostgreSQL URL in .env}"
+      LABEL_GUARDIAN_DATABASE_URL: "${LABEL_GUARDIAN_DATABASE_URL:?Set LABEL_GUARDIAN_DATABASE_URL to the Supabase PostgreSQL URL in .env}"
+      DATASET_ROOT: "${DOCKER_DATASET_ROOT:-/app/data/shared/demo-v1/yolo}"
+    depends_on: !reset null

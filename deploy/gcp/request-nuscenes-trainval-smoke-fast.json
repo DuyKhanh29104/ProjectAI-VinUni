@@ -1,0 +1,16 @@
+{
+  "dataset_type": "nuscenes",
+  "release": "v1.0-trainval",
+  "split": "smoke",
+  "max_frames": 5,
+  "max_blob_archives": 1,
+  "modalities": ["camera", "labels", "calibration", "lidar"],
+  "raw_urls": {
+    "v1.0-trainval_meta.tgz": "https://d36yt3mvayqw5m.cloudfront.net/public/v1.0/v1.0-trainval_meta.tgz",
+    "v1.0-trainval01_blobs.tgz": "https://d36yt3mvayqw5m.cloudfront.net/public/v1.0/v1.0-trainval01_blobs.tgz"
+  },
+  "source": "official",
+  "requested_by": "team",
+  "publish": true,
+  "run_id": "nuscenes-trainval-smoke-fast"
+}

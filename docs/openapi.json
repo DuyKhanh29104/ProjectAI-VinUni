@@ -1,0 +1,3033 @@
+{
+  "components": {
+    "schemas": {
+      "AnnotationDocument": {
+        "properties": {
+          "changeNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changenote"
+          },
+          "datasetId": {
+            "title": "Datasetid",
+            "type": "string"
+          },
+          "datasetVersion": {
+            "title": "Datasetversion",
+            "type": "string"
+          },
+          "image": {
+            "$ref": "#/components/schemas/RealDatasetImage"
+          },
+          "imageId": {
+            "title": "Imageid",
+            "type": "string"
+          },
+          "labels": {
+            "items": {
+              "$ref": "#/components/schemas/RealDatasetLabel"
+            },
+            "title": "Labels",
+            "type": "array"
+          },
+          "originalLabels": {
+            "items": {
+              "$ref": "#/components/schemas/RealDatasetLabel"
+            },
+            "title": "Originallabels",
+            "type": "array"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "split": {
+            "title": "Split",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "updatedBy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedby"
+          }
+        },
+        "required": [
+          "datasetId",
+          "datasetVersion",
+          "split",
+          "imageId",
+          "revision",
+          "image",
+          "labels",
+          "originalLabels"
+        ],
+        "title": "AnnotationDocument",
+        "type": "object"
+      },
+      "AnnotationRestoreRequest": {
+        "properties": {
+          "actorId": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actorid"
+          },
+          "changeNote": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changenote"
+          },
+          "expectedRevision": {
+            "minimum": 0.0,
+            "title": "Expectedrevision",
+            "type": "integer"
+          },
+          "targetRevision": {
+            "minimum": 0.0,
+            "title": "Targetrevision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expectedRevision",
+          "targetRevision"
+        ],
+        "title": "AnnotationRestoreRequest",
+        "type": "object"
+      },
+      "AnnotationRevisionList": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/AnnotationRevisionSummary"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "title": "AnnotationRevisionList",
+        "type": "object"
+      },
+      "AnnotationRevisionSummary": {
+        "properties": {
+          "actorId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actorid"
+          },
+          "changeNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changenote"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "labelCount": {
+            "title": "Labelcount",
+            "type": "integer"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "labelCount"
+        ],
+        "title": "AnnotationRevisionSummary",
+        "type": "object"
+      },
+      "AnnotationSaveRequest": {
+        "properties": {
+          "actorId": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actorid"
+          },
+          "changeNote": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changenote"
+          },
+          "expectedRevision": {
+            "minimum": 0.0,
+            "title": "Expectedrevision",
+            "type": "integer"
+          },
+          "labels": {
+            "items": {
+              "$ref": "#/components/schemas/RealDatasetLabel"
+            },
+            "maxItems": 5000,
+            "title": "Labels",
+            "type": "array"
+          }
+        },
+        "required": [
+          "expectedRevision",
+          "labels"
+        ],
+        "title": "AnnotationSaveRequest",
+        "type": "object"
+      },
+      "ApplicationUserList": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/AuthenticatedUser"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "title": "ApplicationUserList",
+        "type": "object"
+      },
+      "ApplicationUserProfileUpdate": {
+        "properties": {
+          "displayName": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Displayname",
+            "type": "string"
+          }
+        },
+        "required": [
+          "displayName"
+        ],
+        "title": "ApplicationUserProfileUpdate",
+        "type": "object"
+      },
+      "ApplicationUserRoleUpdate": {
+        "properties": {
+          "role": {
+            "enum": [
+              "annotator",
+              "reviewer",
+              "admin"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "title": "ApplicationUserRoleUpdate",
+        "type": "object"
+      },
+      "AuditLogListResponse": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/AuditLogResponse"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "title": "AuditLogListResponse",
+        "type": "object"
+      },
+      "AuditLogResponse": {
+        "properties": {
+          "actorId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actorid"
+          },
+          "actorType": {
+            "enum": [
+              "user",
+              "system",
+              "agent"
+            ],
+            "title": "Actortype",
+            "type": "string"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "caseId": {
+            "title": "Caseid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "eventType": {
+            "title": "Eventtype",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "caseId",
+          "eventType",
+          "actorType",
+          "createdAt"
+        ],
+        "title": "AuditLogResponse",
+        "type": "object"
+      },
+      "AuthenticatedUser": {
+        "properties": {
+          "disabled": {
+            "default": false,
+            "title": "Disabled",
+            "type": "boolean"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "email": {
+            "maxLength": 320,
+            "minLength": 3,
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "annotator",
+              "reviewer",
+              "admin"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "role"
+        ],
+        "title": "AuthenticatedUser",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "LabelQAReport": {
+        "properties": {
+          "imagePath": {
+            "title": "Imagepath",
+            "type": "string"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/QAIssue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "title": "Metrics",
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "pass",
+              "needs_review",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "imagePath",
+          "status",
+          "summary"
+        ],
+        "title": "LabelQAReport",
+        "type": "object"
+      },
+      "PipelineEventDto": {
+        "properties": {
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "phase": {
+            "title": "Phase",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phase",
+          "status",
+          "message",
+          "createdAt"
+        ],
+        "title": "PipelineEventDto",
+        "type": "object"
+      },
+      "PipelineLogDto": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "PipelineLogDto",
+        "type": "object"
+      },
+      "PipelineProgressDto": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "percent": {
+            "title": "Percent",
+            "type": "integer"
+          },
+          "phase": {
+            "title": "Phase",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phase",
+          "percent",
+          "detail"
+        ],
+        "title": "PipelineProgressDto",
+        "type": "object"
+      },
+      "PipelineRunDto": {
+        "properties": {
+          "batchJobId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batchjobid"
+          },
+          "canonicalPrefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonicalprefix"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "datasetType": {
+            "title": "Datasettype",
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/PipelineEventDto"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finishedat"
+          },
+          "images": {
+            "default": 0,
+            "title": "Images",
+            "type": "integer"
+          },
+          "logs": {
+            "items": {
+              "$ref": "#/components/schemas/PipelineLogDto"
+            },
+            "title": "Logs",
+            "type": "array"
+          },
+          "objects": {
+            "default": 0,
+            "title": "Objects",
+            "type": "integer"
+          },
+          "release": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release"
+          },
+          "requestGcsUri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestgcsuri"
+          },
+          "requestedBy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestedby"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "runId": {
+            "title": "Runid",
+            "type": "string"
+          },
+          "split": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/PipelineProgressDto"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "validation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation"
+          }
+        },
+        "required": [
+          "runId",
+          "datasetType",
+          "status"
+        ],
+        "title": "PipelineRunDto",
+        "type": "object"
+      },
+      "PipelineRunListDto": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/PipelineRunDto"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "title": "PipelineRunListDto",
+        "type": "object"
+      },
+      "QAIssue": {
+        "properties": {
+          "blocking": {
+            "default": true,
+            "title": "Blocking",
+            "type": "boolean"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "title": "Evidence",
+            "type": "object"
+          },
+          "explanation": {
+            "default": "",
+            "title": "Explanation",
+            "type": "string"
+          },
+          "issueType": {
+            "enum": [
+              "wrong_class",
+              "missing_label",
+              "extra_or_wrong_label",
+              "bbox_misaligned",
+              "loose_bbox",
+              "duplicate_label"
+            ],
+            "title": "Issuetype",
+            "type": "string"
+          },
+          "labelId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labelid"
+          },
+          "severity": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "suggestedFix": {
+            "default": "",
+            "title": "Suggestedfix",
+            "type": "string"
+          }
+        },
+        "required": [
+          "issueType",
+          "severity"
+        ],
+        "title": "QAIssue",
+        "type": "object"
+      },
+      "QaCaseListResponse": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/QaCaseResponse"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results",
+          "limit",
+          "offset"
+        ],
+        "title": "QaCaseListResponse",
+        "type": "object"
+      },
+      "QaCaseResponse": {
+        "properties": {
+          "assignedTo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignedto"
+          },
+          "className": {
+            "title": "Classname",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "datasetId": {
+            "title": "Datasetid",
+            "type": "string"
+          },
+          "datasetVersion": {
+            "title": "Datasetversion",
+            "type": "string"
+          },
+          "errorType": {
+            "title": "Errortype",
+            "type": "string"
+          },
+          "evaluationId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluationid"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "title": "Evidence",
+            "type": "object"
+          },
+          "frameFileName": {
+            "title": "Framefilename",
+            "type": "string"
+          },
+          "frameIndex": {
+            "title": "Frameindex",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "priority": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Priority",
+            "type": "string"
+          },
+          "recommendation": {
+            "title": "Recommendation",
+            "type": "string"
+          },
+          "riskScore": {
+            "title": "Riskscore",
+            "type": "integer"
+          },
+          "sequenceId": {
+            "title": "Sequenceid",
+            "type": "string"
+          },
+          "sourceImageId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceimageid"
+          },
+          "sourceSplit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcesplit"
+          },
+          "status": {
+            "enum": [
+              "unreviewed",
+              "in_review",
+              "confirmed",
+              "corrected",
+              "rejected",
+              "skipped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "targetTrackId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targettrackid"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "datasetId",
+          "datasetVersion",
+          "sequenceId",
+          "frameIndex",
+          "frameFileName",
+          "className",
+          "errorType",
+          "riskScore",
+          "priority",
+          "status",
+          "evidence",
+          "recommendation",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "QaCaseResponse",
+        "type": "object"
+      },
+      "QaCaseStatusRequest": {
+        "properties": {
+          "actor_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "in_review",
+              "confirmed",
+              "rejected",
+              "skipped"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "QaCaseStatusRequest",
+        "type": "object"
+      },
+      "RealDatasetBBox": {
+        "properties": {
+          "x1": {
+            "title": "X1",
+            "type": "number"
+          },
+          "x2": {
+            "title": "X2",
+            "type": "number"
+          },
+          "y1": {
+            "title": "Y1",
+            "type": "number"
+          },
+          "y2": {
+            "title": "Y2",
+            "type": "number"
+          }
+        },
+        "required": [
+          "x1",
+          "y1",
+          "x2",
+          "y2"
+        ],
+        "title": "RealDatasetBBox",
+        "type": "object"
+      },
+      "RealDatasetEvaluation": {
+        "properties": {
+          "cached": {
+            "title": "Cached",
+            "type": "boolean"
+          },
+          "createdCaseIds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Createdcaseids",
+            "type": "array"
+          },
+          "datasetId": {
+            "title": "Datasetid",
+            "type": "string"
+          },
+          "datasetVersion": {
+            "title": "Datasetversion",
+            "type": "string"
+          },
+          "evaluationId": {
+            "title": "Evaluationid",
+            "type": "string"
+          },
+          "image": {
+            "$ref": "#/components/schemas/RealDatasetImage"
+          },
+          "inferenceMode": {
+            "const": "yolo",
+            "default": "yolo",
+            "title": "Inferencemode",
+            "type": "string"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/RealDatasetMatch"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "modelName": {
+            "title": "Modelname",
+            "type": "string"
+          },
+          "persisted": {
+            "default": false,
+            "title": "Persisted",
+            "type": "boolean"
+          },
+          "predictions": {
+            "items": {
+              "$ref": "#/components/schemas/RealDatasetPrediction"
+            },
+            "title": "Predictions",
+            "type": "array"
+          },
+          "report": {
+            "$ref": "#/components/schemas/LabelQAReport"
+          },
+          "unmatchedGroundTruth": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Unmatchedgroundtruth",
+            "type": "array"
+          },
+          "unmatchedPredictions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Unmatchedpredictions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "evaluationId",
+          "datasetId",
+          "datasetVersion",
+          "modelName",
+          "image",
+          "report",
+          "predictions",
+          "matches",
+          "unmatchedGroundTruth",
+          "unmatchedPredictions",
+          "cached"
+        ],
+        "title": "RealDatasetEvaluation",
+        "type": "object"
+      },
+      "RealDatasetFrameSample": {
+        "properties": {
+          "cameraCount": {
+            "title": "Cameracount",
+            "type": "integer"
+          },
+          "cameras": {
+            "items": {
+              "$ref": "#/components/schemas/RealDatasetImage"
+            },
+            "title": "Cameras",
+            "type": "array"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "labelCount": {
+            "title": "Labelcount",
+            "type": "integer"
+          },
+          "sampleId": {
+            "title": "Sampleid",
+            "type": "string"
+          },
+          "sequenceId": {
+            "title": "Sequenceid",
+            "type": "string"
+          },
+          "split": {
+            "title": "Split",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "sampleId",
+          "sequenceId",
+          "split",
+          "cameraCount",
+          "labelCount",
+          "cameras"
+        ],
+        "title": "RealDatasetFrameSample",
+        "type": "object"
+      },
+      "RealDatasetFrameSampleList": {
+        "properties": {
+          "availableDatasets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Availabledatasets",
+            "type": "array"
+          },
+          "availableSplits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Availablesplits",
+            "type": "array"
+          },
+          "classes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Classes",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset"
+          },
+          "imageCount": {
+            "title": "Imagecount",
+            "type": "integer"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/RealDatasetFrameSample"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "split": {
+            "title": "Split",
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "imageCount",
+          "results",
+          "split",
+          "limit",
+          "offset",
+          "availableSplits",
+          "classes"
+        ],
+        "title": "RealDatasetFrameSampleList",
+        "type": "object"
+      },
+      "RealDatasetImage": {
+        "properties": {
+          "cameraChannel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Camerachannel"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "frameSampleId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Framesampleid"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "imageUrl": {
+            "title": "Imageurl",
+            "type": "string"
+          },
+          "labelCount": {
+            "title": "Labelcount",
+            "type": "integer"
+          },
+          "labels": {
+            "items": {
+              "$ref": "#/components/schemas/RealDatasetLabel"
+            },
+            "title": "Labels",
+            "type": "array"
+          },
+          "release": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release"
+          },
+          "sequenceId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequenceid"
+          },
+          "split": {
+            "title": "Split",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "split",
+          "filename",
+          "width",
+          "height",
+          "labelCount",
+          "labels",
+          "imageUrl"
+        ],
+        "title": "RealDatasetImage",
+        "type": "object"
+      },
+      "RealDatasetImageList": {
+        "properties": {
+          "availableDatasets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Availabledatasets",
+            "type": "array"
+          },
+          "availableSplits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Availablesplits",
+            "type": "array"
+          },
+          "classes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Classes",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/RealDatasetImage"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "split": {
+            "title": "Split",
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "results",
+          "split",
+          "limit",
+          "offset",
+          "availableSplits",
+          "classes"
+        ],
+        "title": "RealDatasetImageList",
+        "type": "object"
+      },
+      "RealDatasetLabel": {
+        "properties": {
+          "attributes": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "title": "Attributes",
+            "type": "object"
+          },
+          "bbox": {
+            "$ref": "#/components/schemas/RealDatasetBBox"
+          },
+          "className": {
+            "title": "Classname",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "trackId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trackid"
+          }
+        },
+        "required": [
+          "id",
+          "className",
+          "bbox"
+        ],
+        "title": "RealDatasetLabel",
+        "type": "object"
+      },
+      "RealDatasetMatch": {
+        "properties": {
+          "classMatch": {
+            "title": "Classmatch",
+            "type": "boolean"
+          },
+          "groundTruthClass": {
+            "title": "Groundtruthclass",
+            "type": "string"
+          },
+          "groundTruthId": {
+            "title": "Groundtruthid",
+            "type": "string"
+          },
+          "iou": {
+            "title": "Iou",
+            "type": "number"
+          },
+          "predictionClass": {
+            "title": "Predictionclass",
+            "type": "string"
+          },
+          "predictionId": {
+            "title": "Predictionid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "groundTruthId",
+          "predictionId",
+          "groundTruthClass",
+          "predictionClass",
+          "iou",
+          "classMatch"
+        ],
+        "title": "RealDatasetMatch",
+        "type": "object"
+      },
+      "RealDatasetPrediction": {
+        "properties": {
+          "bbox": {
+            "$ref": "#/components/schemas/RealDatasetBBox"
+          },
+          "className": {
+            "title": "Classname",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "className",
+          "bbox",
+          "confidence"
+        ],
+        "title": "RealDatasetPrediction",
+        "type": "object"
+      },
+      "ServiceHealthResponse": {
+        "properties": {
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "service": {
+            "default": "label-guardian-backend",
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "environment",
+          "version"
+        ],
+        "title": "ServiceHealthResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "QA orchestration API for 2D perception annotations",
+    "title": "Label Guardian API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "get_my_profile_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticatedUser"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get My Profile",
+        "tags": [
+          "Authentication"
+        ]
+      },
+      "put": {
+        "operationId": "update_my_profile_api_v1_auth_me_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationUserProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticatedUser"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update My Profile",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/users": {
+      "get": {
+        "operationId": "list_application_users_api_v1_auth_users_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationUserList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Application Users",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/users/{user_id}/role": {
+      "patch": {
+        "operationId": "update_application_user_role_api_v1_auth_users__user_id__role_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationUserRoleUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticatedUser"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Application User Role",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/dataset/frame-samples": {
+      "get": {
+        "description": "List canonical frame samples, grouping all camera views into one review item.",
+        "operationId": "list_real_dataset_frame_samples_api_v1_dataset_frame_samples_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "split",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Split"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dataset",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dataset"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 8,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealDatasetFrameSampleList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Real Dataset Frame Samples",
+        "tags": [
+          "Real Dataset QA"
+        ]
+      }
+    },
+    "/api/v1/dataset/images": {
+      "get": {
+        "operationId": "list_real_dataset_images_api_v1_dataset_images_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "split",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Split"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dataset",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dataset"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealDatasetImageList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Real Dataset Images",
+        "tags": [
+          "Real Dataset QA"
+        ]
+      }
+    },
+    "/api/v1/dataset/images/{split}/{image_id}": {
+      "get": {
+        "operationId": "get_real_dataset_image_api_v1_dataset_images__split___image_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "split",
+            "required": true,
+            "schema": {
+              "title": "Split",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "image_id",
+            "required": true,
+            "schema": {
+              "title": "Image Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealDatasetImage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Real Dataset Image",
+        "tags": [
+          "Real Dataset QA"
+        ]
+      }
+    },
+    "/api/v1/dataset/images/{split}/{image_id}/annotations": {
+      "get": {
+        "operationId": "get_image_annotations_api_v1_dataset_images__split___image_id__annotations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "split",
+            "required": true,
+            "schema": {
+              "title": "Split",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "image_id",
+            "required": true,
+            "schema": {
+              "title": "Image Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationDocument"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Image Annotations",
+        "tags": [
+          "Real Dataset QA"
+        ]
+      },
+      "put": {
+        "operationId": "save_image_annotations_api_v1_dataset_images__split___image_id__annotations_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "split",
+            "required": true,
+            "schema": {
+              "title": "Split",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "image_id",
+            "required": true,
+            "schema": {
+              "title": "Image Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnotationSaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationDocument"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Save Image Annotations",
+        "tags": [
+          "Real Dataset QA"
+        ]
+      }
+    },
+    "/api/v1/dataset/images/{split}/{image_id}/annotations/history": {
+      "get": {
+        "operationId": "get_image_annotation_history_api_v1_dataset_images__split___image_id__annotations_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "split",
+            "required": true,
+            "schema": {
+              "title": "Split",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "image_id",
+            "required": true,
+            "schema": {
+              "title": "Image Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationRevisionList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Image Annotation History",
+        "tags": [
+          "Real Dataset QA"
+        ]
+      }
+    },
+    "/api/v1/dataset/images/{split}/{image_id}/annotations/restore": {
+      "post": {
+        "operationId": "restore_image_annotations_api_v1_dataset_images__split___image_id__annotations_restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "split",
+            "required": true,
+            "schema": {
+              "title": "Split",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "image_id",
+            "required": true,
+            "schema": {
+              "title": "Image Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnotationRestoreRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationDocument"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Image Annotations",
+        "tags": [
+          "Real Dataset QA"
+        ]
+      }
+    },
+    "/api/v1/dataset/images/{split}/{image_id}/content": {
+      "get": {
+        "operationId": "get_real_dataset_image_content_api_v1_dataset_images__split___image_id__content_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "split",
+            "required": true,
+            "schema": {
+              "title": "Split",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "image_id",
+            "required": true,
+            "schema": {
+              "title": "Image Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Real Dataset Image Content",
+        "tags": [
+          "Real Dataset QA"
+        ]
+      }
+    },
+    "/api/v1/dataset/images/{split}/{image_id}/evaluate": {
+      "post": {
+        "operationId": "evaluate_real_dataset_image_api_v1_dataset_images__split___image_id__evaluate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "split",
+            "required": true,
+            "schema": {
+              "title": "Split",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "image_id",
+            "required": true,
+            "schema": {
+              "title": "Image Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "force",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Force",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "persist",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Persist",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealDatasetEvaluation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Evaluate Real Dataset Image",
+        "tags": [
+          "Real Dataset QA"
+        ]
+      }
+    },
+    "/api/v1/dataset/pointclouds/{dataset_path}/{split}/{sequence_id}/{sample_id}/content": {
+      "get": {
+        "operationId": "get_real_dataset_pointcloud_content_api_v1_dataset_pointclouds__dataset_path___split___sequence_id___sample_id__content_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataset_path",
+            "required": true,
+            "schema": {
+              "title": "Dataset Path",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "split",
+            "required": true,
+            "schema": {
+              "title": "Split",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sequence_id",
+            "required": true,
+            "schema": {
+              "title": "Sequence Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sample_id",
+            "required": true,
+            "schema": {
+              "title": "Sample Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Real Dataset Pointcloud Content",
+        "tags": [
+          "Real Dataset QA"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceHealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/v1/ingestion/runs": {
+      "get": {
+        "operationId": "list_runs_api_v1_ingestion_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineRunListDto"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Runs",
+        "tags": [
+          "Cloud Ingestion"
+        ]
+      }
+    },
+    "/api/v1/ingestion/runs/{run_id}": {
+      "get": {
+        "operationId": "get_run_api_v1_ingestion_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineRunDto"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Run",
+        "tags": [
+          "Cloud Ingestion"
+        ]
+      }
+    },
+    "/api/v1/qa-cases": {
+      "get": {
+        "operationId": "list_qa_cases_api_v1_qa_cases_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "unreviewed",
+                    "in_review",
+                    "confirmed",
+                    "corrected",
+                    "rejected",
+                    "skipped"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sequenceId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sequenceid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "datasetId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Datasetid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "split",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Split"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sourceImageId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sourceimageid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "minRisk",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Minrisk"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QaCaseListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Qa Cases",
+        "tags": [
+          "QA Cases"
+        ]
+      }
+    },
+    "/api/v1/qa-cases/{case_id}": {
+      "get": {
+        "operationId": "get_qa_case_api_v1_qa_cases__case_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QaCaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Qa Case",
+        "tags": [
+          "QA Cases"
+        ]
+      }
+    },
+    "/api/v1/qa-cases/{case_id}/audit": {
+      "get": {
+        "operationId": "get_qa_case_audit_api_v1_qa_cases__case_id__audit_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Qa Case Audit",
+        "tags": [
+          "QA Cases"
+        ]
+      }
+    },
+    "/api/v1/qa-cases/{case_id}/status": {
+      "post": {
+        "operationId": "update_qa_case_status_api_v1_qa_cases__case_id__status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QaCaseStatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QaCaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Qa Case Status",
+        "tags": [
+          "QA Cases"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceHealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/ready": {
+      "get": {
+        "description": "Report ready after the application can reach PostgreSQL.",
+        "operationId": "readiness_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceHealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Readiness",
+        "tags": [
+          "System"
+        ]
+      }
+    }
+  }
+}

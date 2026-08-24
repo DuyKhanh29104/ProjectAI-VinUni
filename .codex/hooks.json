@@ -1,0 +1,29 @@
+{
+  "description": "AI20K AI usage logging",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/_pyrun.sh scripts/log_hook.py --tool=codex",
+            "commandWindows": ".venv\\Scripts\\python.exe scripts\\log_hook.py --tool=codex",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/_pyrun.sh scripts/log_hook.py --tool=codex",
+            "commandWindows": ".venv\\Scripts\\python.exe scripts\\log_hook.py --tool=codex",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

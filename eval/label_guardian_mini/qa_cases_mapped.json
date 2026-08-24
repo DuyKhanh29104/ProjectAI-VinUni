@@ -1,0 +1,281 @@
+{
+  "datasetId": "label-guardian-mini",
+  "datasetVersion": "1.0",
+  "generatedAt": "2026-08-09T00:00:00Z",
+  "cases": [
+    {
+      "id": "LG-0001",
+      "datasetId": "label-guardian-mini",
+      "datasetVersion": "1.0",
+      "sequenceId": "seq-001",
+      "frameIndex": 2,
+      "frameFileName": "frame_0002.png",
+      "className": "car",
+      "targetTrackId": "seq001-car-main",
+      "errorType": "box_misalignment",
+      "riskScore": 88,
+      "priority": "high",
+      "status": "unreviewed",
+      "syncStatus": "not_requested",
+      "evidence": {
+        "groundTruthBbox": [
+          270,
+          430,
+          178,
+          104
+        ],
+        "observedPredictions": [
+          {
+            "id": "pred-seq-001-0002-seq001-car-main",
+            "trackId": "seq001-car-main",
+            "label": "car",
+            "bbox": [
+              318,
+              446,
+              160,
+              104
+            ],
+            "confidence": 0.78
+          }
+        ],
+        "summary": "Synthetic evidence for box_misalignment."
+      },
+      "recommendation": "Äiá»u chá»‰nh bounding box khá»›p thÃ¢n xe.",
+      "cvat": {
+        "projectId": 433367,
+        "taskId": 2501081,
+        "jobId": 4342385,
+        "frameId": 2,
+        "annotationId": null
+      },
+      "createdAt": "2026-08-09T00:00:00Z",
+      "updatedAt": "2026-08-09T00:00:00Z"
+    },
+    {
+      "id": "LG-0002",
+      "datasetId": "label-guardian-mini",
+      "datasetVersion": "1.0",
+      "sequenceId": "seq-001",
+      "frameIndex": 3,
+      "frameFileName": "frame_0003.png",
+      "className": "pedestrian",
+      "targetTrackId": "seq001-person-main",
+      "errorType": "wrong_class",
+      "riskScore": 82,
+      "priority": "high",
+      "status": "unreviewed",
+      "syncStatus": "not_requested",
+      "evidence": {
+        "groundTruthBbox": [
+          908,
+          346,
+          58,
+          170
+        ],
+        "observedPredictions": [
+          {
+            "id": "pred-seq-001-0003-seq001-person-main",
+            "trackId": "seq001-person-main",
+            "label": "cyclist",
+            "bbox": [
+              907,
+              347,
+              58,
+              170
+            ],
+            "confidence": 0.81
+          }
+        ],
+        "summary": "Synthetic evidence for wrong_class."
+      },
+      "recommendation": "Äá»•i class dá»± Ä‘oÃ¡n vá» pedestrian.",
+      "cvat": {
+        "projectId": 433367,
+        "taskId": 2501081,
+        "jobId": 4342385,
+        "frameId": 3,
+        "annotationId": null
+      },
+      "createdAt": "2026-08-09T00:00:00Z",
+      "updatedAt": "2026-08-09T00:00:00Z"
+    },
+    {
+      "id": "LG-0003",
+      "datasetId": "label-guardian-mini",
+      "datasetVersion": "1.0",
+      "sequenceId": "seq-001",
+      "frameIndex": 4,
+      "frameFileName": "frame_0004.png",
+      "className": "car",
+      "targetTrackId": "seq001-car-right",
+      "errorType": "missing_object",
+      "riskScore": 91,
+      "priority": "critical",
+      "status": "unreviewed",
+      "syncStatus": "not_requested",
+      "evidence": {
+        "groundTruthBbox": [
+          664,
+          448,
+          154,
+          92
+        ],
+        "observedPredictions": [],
+        "summary": "Synthetic evidence for missing_object."
+      },
+      "recommendation": "Bá»• sung annotation cho xe bá»‹ bá» sÃ³t.",
+      "cvat": {
+        "projectId": 433367,
+        "taskId": 2501081,
+        "jobId": 4342385,
+        "frameId": 4,
+        "annotationId": null
+      },
+      "createdAt": "2026-08-09T00:00:00Z",
+      "updatedAt": "2026-08-09T00:00:00Z"
+    },
+    {
+      "id": "LG-0004",
+      "datasetId": "label-guardian-mini",
+      "datasetVersion": "1.0",
+      "sequenceId": "seq-002",
+      "frameIndex": 1,
+      "frameFileName": "frame_0001.png",
+      "className": "car",
+      "targetTrackId": "seq002-car-main",
+      "errorType": "duplicate_annotation",
+      "riskScore": 74,
+      "priority": "medium",
+      "status": "unreviewed",
+      "syncStatus": "not_requested",
+      "evidence": {
+        "groundTruthBbox": [
+          202,
+          452,
+          184,
+          102
+        ],
+        "observedPredictions": [
+          {
+            "id": "pred-seq-002-0001-seq002-car-main",
+            "trackId": "seq002-car-main",
+            "label": "car",
+            "bbox": [
+              201,
+              453,
+              184,
+              102
+            ],
+            "confidence": 0.94
+          },
+          {
+            "id": "pred-seq-002-0001-seq002-car-main-duplicate",
+            "trackId": "seq002-car-main",
+            "label": "car",
+            "bbox": [
+              226,
+              457,
+              184,
+              102
+            ],
+            "confidence": 0.72
+          }
+        ],
+        "summary": "Synthetic evidence for duplicate_annotation."
+      },
+      "recommendation": "Giá»¯ má»™t annotation vÃ  loáº¡i báº£n trÃ¹ng láº·p.",
+      "cvat": {
+        "projectId": 433367,
+        "taskId": 2501083,
+        "jobId": 4342388,
+        "frameId": 1,
+        "annotationId": null
+      },
+      "createdAt": "2026-08-09T00:00:00Z",
+      "updatedAt": "2026-08-09T00:00:00Z"
+    },
+    {
+      "id": "LG-0005",
+      "datasetId": "label-guardian-mini",
+      "datasetVersion": "1.0",
+      "sequenceId": "seq-002",
+      "frameIndex": 3,
+      "frameFileName": "frame_0003.png",
+      "className": "cyclist",
+      "targetTrackId": "seq002-cyclist-main",
+      "errorType": "track_id_switch",
+      "riskScore": 86,
+      "priority": "high",
+      "status": "unreviewed",
+      "syncStatus": "not_requested",
+      "evidence": {
+        "groundTruthBbox": [
+          890,
+          420,
+          116,
+          132
+        ],
+        "observedPredictions": [
+          {
+            "id": "pred-seq-002-0003-seq002-cyclist-main",
+            "trackId": "seq002-cyclist-switched",
+            "label": "cyclist",
+            "bbox": [
+              890,
+              420,
+              116,
+              132
+            ],
+            "confidence": 0.84
+          }
+        ],
+        "summary": "Synthetic evidence for track_id_switch."
+      },
+      "recommendation": "KhÃ´i phá»¥c track ID nháº¥t quÃ¡n cho cyclist.",
+      "cvat": {
+        "projectId": 433367,
+        "taskId": 2501083,
+        "jobId": 4342388,
+        "frameId": 3,
+        "annotationId": null
+      },
+      "createdAt": "2026-08-09T00:00:00Z",
+      "updatedAt": "2026-08-09T00:00:00Z"
+    },
+    {
+      "id": "LG-0006",
+      "datasetId": "label-guardian-mini",
+      "datasetVersion": "1.0",
+      "sequenceId": "seq-002",
+      "frameIndex": 4,
+      "frameFileName": "frame_0004.png",
+      "className": "traffic_sign",
+      "targetTrackId": "seq002-sign-main",
+      "errorType": "track_break",
+      "riskScore": 79,
+      "priority": "medium",
+      "status": "unreviewed",
+      "syncStatus": "not_requested",
+      "evidence": {
+        "groundTruthBbox": [
+          1060,
+          180,
+          72,
+          136
+        ],
+        "observedPredictions": [],
+        "summary": "Synthetic evidence for track_break."
+      },
+      "recommendation": "Ná»‘i láº¡i track cá»§a traffic sign táº¡i frame nÃ y.",
+      "cvat": {
+        "projectId": 433367,
+        "taskId": 2501083,
+        "jobId": 4342388,
+        "frameId": 4,
+        "annotationId": null
+      },
+      "createdAt": "2026-08-09T00:00:00Z",
+      "updatedAt": "2026-08-09T00:00:00Z"
+    }
+  ]
+}

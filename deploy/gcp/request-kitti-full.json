@@ -1,0 +1,10 @@
+{
+  "dataset_type": "kitti",
+  "release": "object",
+  "split": "full",
+  "modalities": ["camera", "labels", "calibration", "lidar"],
+  "source": "official",
+  "requested_by": "team",
+  "publish": true,
+  "run_id": "kitti-full"
+}

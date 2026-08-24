@@ -1,0 +1,561 @@
+{
+  "info": {
+    "description": "Label Guardian deterministic synthetic fixture",
+    "version": "1.0"
+  },
+  "licenses": [],
+  "images": [
+    {
+      "id": 1,
+      "file_name": "frame_0000.png",
+      "width": 1280,
+      "height": 720,
+      "sequence_id": "seq-002",
+      "frame_index": 0
+    },
+    {
+      "id": 2,
+      "file_name": "frame_0001.png",
+      "width": 1280,
+      "height": 720,
+      "sequence_id": "seq-002",
+      "frame_index": 1
+    },
+    {
+      "id": 3,
+      "file_name": "frame_0002.png",
+      "width": 1280,
+      "height": 720,
+      "sequence_id": "seq-002",
+      "frame_index": 2
+    },
+    {
+      "id": 4,
+      "file_name": "frame_0003.png",
+      "width": 1280,
+      "height": 720,
+      "sequence_id": "seq-002",
+      "frame_index": 3
+    },
+    {
+      "id": 5,
+      "file_name": "frame_0004.png",
+      "width": 1280,
+      "height": 720,
+      "sequence_id": "seq-002",
+      "frame_index": 4
+    },
+    {
+      "id": 6,
+      "file_name": "frame_0005.png",
+      "width": 1280,
+      "height": 720,
+      "sequence_id": "seq-002",
+      "frame_index": 5
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 4,
+      "bbox": [
+        1060,
+        180,
+        72,
+        136
+      ],
+      "area": 9792,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-sign-main"
+      }
+    },
+    {
+      "id": 2,
+      "image_id": 1,
+      "category_id": 1,
+      "bbox": [
+        184,
+        452,
+        184,
+        102
+      ],
+      "area": 18768,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-car-main"
+      }
+    },
+    {
+      "id": 3,
+      "image_id": 1,
+      "category_id": 1,
+      "bbox": [
+        790,
+        420,
+        160,
+        98
+      ],
+      "area": 15680,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-car-right"
+      }
+    },
+    {
+      "id": 4,
+      "image_id": 1,
+      "category_id": 2,
+      "bbox": [
+        605,
+        340,
+        58,
+        174
+      ],
+      "area": 10092,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-person-main"
+      }
+    },
+    {
+      "id": 5,
+      "image_id": 1,
+      "category_id": 3,
+      "bbox": [
+        920,
+        420,
+        116,
+        132
+      ],
+      "area": 15312,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-cyclist-main"
+      }
+    },
+    {
+      "id": 6,
+      "image_id": 2,
+      "category_id": 4,
+      "bbox": [
+        1060,
+        180,
+        72,
+        136
+      ],
+      "area": 9792,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-sign-main"
+      }
+    },
+    {
+      "id": 7,
+      "image_id": 2,
+      "category_id": 1,
+      "bbox": [
+        202,
+        452,
+        184,
+        102
+      ],
+      "area": 18768,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-car-main"
+      }
+    },
+    {
+      "id": 8,
+      "image_id": 2,
+      "category_id": 1,
+      "bbox": [
+        778,
+        420,
+        160,
+        98
+      ],
+      "area": 15680,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-car-right"
+      }
+    },
+    {
+      "id": 9,
+      "image_id": 2,
+      "category_id": 2,
+      "bbox": [
+        610,
+        340,
+        58,
+        174
+      ],
+      "area": 10092,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-person-main"
+      }
+    },
+    {
+      "id": 10,
+      "image_id": 2,
+      "category_id": 3,
+      "bbox": [
+        910,
+        420,
+        116,
+        132
+      ],
+      "area": 15312,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-cyclist-main"
+      }
+    },
+    {
+      "id": 11,
+      "image_id": 3,
+      "category_id": 4,
+      "bbox": [
+        1060,
+        180,
+        72,
+        136
+      ],
+      "area": 9792,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-sign-main"
+      }
+    },
+    {
+      "id": 12,
+      "image_id": 3,
+      "category_id": 1,
+      "bbox": [
+        220,
+        452,
+        184,
+        102
+      ],
+      "area": 18768,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-car-main"
+      }
+    },
+    {
+      "id": 13,
+      "image_id": 3,
+      "category_id": 1,
+      "bbox": [
+        766,
+        420,
+        160,
+        98
+      ],
+      "area": 15680,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-car-right"
+      }
+    },
+    {
+      "id": 14,
+      "image_id": 3,
+      "category_id": 2,
+      "bbox": [
+        615,
+        340,
+        58,
+        174
+      ],
+      "area": 10092,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-person-main"
+      }
+    },
+    {
+      "id": 15,
+      "image_id": 3,
+      "category_id": 3,
+      "bbox": [
+        900,
+        420,
+        116,
+        132
+      ],
+      "area": 15312,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-cyclist-main"
+      }
+    },
+    {
+      "id": 16,
+      "image_id": 4,
+      "category_id": 4,
+      "bbox": [
+        1060,
+        180,
+        72,
+        136
+      ],
+      "area": 9792,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-sign-main"
+      }
+    },
+    {
+      "id": 17,
+      "image_id": 4,
+      "category_id": 1,
+      "bbox": [
+        238,
+        452,
+        184,
+        102
+      ],
+      "area": 18768,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-car-main"
+      }
+    },
+    {
+      "id": 18,
+      "image_id": 4,
+      "category_id": 1,
+      "bbox": [
+        754,
+        420,
+        160,
+        98
+      ],
+      "area": 15680,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-car-right"
+      }
+    },
+    {
+      "id": 19,
+      "image_id": 4,
+      "category_id": 2,
+      "bbox": [
+        620,
+        340,
+        58,
+        174
+      ],
+      "area": 10092,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-person-main"
+      }
+    },
+    {
+      "id": 20,
+      "image_id": 4,
+      "category_id": 3,
+      "bbox": [
+        890,
+        420,
+        116,
+        132
+      ],
+      "area": 15312,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-cyclist-main"
+      }
+    },
+    {
+      "id": 21,
+      "image_id": 5,
+      "category_id": 4,
+      "bbox": [
+        1060,
+        180,
+        72,
+        136
+      ],
+      "area": 9792,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-sign-main"
+      }
+    },
+    {
+      "id": 22,
+      "image_id": 5,
+      "category_id": 1,
+      "bbox": [
+        256,
+        452,
+        184,
+        102
+      ],
+      "area": 18768,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-car-main"
+      }
+    },
+    {
+      "id": 23,
+      "image_id": 5,
+      "category_id": 1,
+      "bbox": [
+        742,
+        420,
+        160,
+        98
+      ],
+      "area": 15680,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-car-right"
+      }
+    },
+    {
+      "id": 24,
+      "image_id": 5,
+      "category_id": 2,
+      "bbox": [
+        625,
+        340,
+        58,
+        174
+      ],
+      "area": 10092,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-person-main"
+      }
+    },
+    {
+      "id": 25,
+      "image_id": 5,
+      "category_id": 3,
+      "bbox": [
+        880,
+        420,
+        116,
+        132
+      ],
+      "area": 15312,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-cyclist-main"
+      }
+    },
+    {
+      "id": 26,
+      "image_id": 6,
+      "category_id": 4,
+      "bbox": [
+        1060,
+        180,
+        72,
+        136
+      ],
+      "area": 9792,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-sign-main"
+      }
+    },
+    {
+      "id": 27,
+      "image_id": 6,
+      "category_id": 1,
+      "bbox": [
+        274,
+        452,
+        184,
+        102
+      ],
+      "area": 18768,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-car-main"
+      }
+    },
+    {
+      "id": 28,
+      "image_id": 6,
+      "category_id": 1,
+      "bbox": [
+        730,
+        420,
+        160,
+        98
+      ],
+      "area": 15680,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-car-right"
+      }
+    },
+    {
+      "id": 29,
+      "image_id": 6,
+      "category_id": 2,
+      "bbox": [
+        630,
+        340,
+        58,
+        174
+      ],
+      "area": 10092,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-person-main"
+      }
+    },
+    {
+      "id": 30,
+      "image_id": 6,
+      "category_id": 3,
+      "bbox": [
+        870,
+        420,
+        116,
+        132
+      ],
+      "area": 15312,
+      "iscrowd": 0,
+      "attributes": {
+        "track_id": "seq002-cyclist-main"
+      }
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "car",
+      "supercategory": "road_object"
+    },
+    {
+      "id": 2,
+      "name": "pedestrian",
+      "supercategory": "road_object"
+    },
+    {
+      "id": 3,
+      "name": "cyclist",
+      "supercategory": "road_object"
+    },
+    {
+      "id": 4,
+      "name": "traffic_sign",
+      "supercategory": "road_object"
+    }
+  ]
+}

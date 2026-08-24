@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-label_guardian}
+      POSTGRES_USER: ${POSTGRES_USER:-label_guardian}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-label_guardian_dev}
+    ports:
+      - "${POSTGRES_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  postgres-test:
+    image: postgres:16-alpine
+    profiles: ["test"]
+    environment:
+      POSTGRES_DB: label_guardian_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "${POSTGRES_TEST_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_TEST_PORT:-5433}:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    restart: "no"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d label_guardian_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${BACKEND_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      PORT: 8000
+      RUN_MIGRATIONS: "${RUN_MIGRATIONS:-true}"
+      DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-label_guardian}:${POSTGRES_PASSWORD:-label_guardian_dev}@postgres:5432/${POSTGRES_DB:-label_guardian}"
+      LABEL_GUARDIAN_DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-label_guardian}:${POSTGRES_PASSWORD:-label_guardian_dev}@postgres:5432/${POSTGRES_DB:-label_guardian}"
+      DATASET_ROOT: "${DOCKER_DATASET_ROOT:-/app/data/shared/demo-v1/yolo}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:

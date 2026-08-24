@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-label="Mock perception frame">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#dbeeff"/>
+      <stop offset="1" stop-color="#f8fbff"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b8c8d8"/>
+      <stop offset="1" stop-color="#63758b"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#sky)"/>
+  <rect y="190" width="640" height="170" fill="url(#road)"/>
+  <path d="M240 360 310 190h22l68 170z" fill="#f8fbff" opacity=".75"/>
+  <path d="M420 360 352 190h18l94 170z" fill="#f8fbff" opacity=".45"/>
+  <rect x="84" y="174" width="132" height="72" rx="5" fill="#35688f"/>
+  <rect x="420" y="160" width="94" height="58" rx="5" fill="#bd814f"/>
+  <rect x="272" y="220" width="120" height="72" rx="5" fill="none" stroke="#1769d2" stroke-width="4"/>
+  <rect x="274" y="222" width="116" height="68" rx="4" fill="#ffffff" opacity=".2"/>
+  <circle cx="301" cy="302" r="18" fill="#1f2e3f"/>
+  <circle cx="370" cy="302" r="18" fill="#1f2e3f"/>
+  <path d="M0 186h640" stroke="#8fa7bc" stroke-width="3"/>
+</svg>

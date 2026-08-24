@@ -1,0 +1,60 @@
+{
+  "taskGroups": [
+    {
+      "taskSpec": {
+        "runnables": [
+          {
+            "container": {
+              "imageUri": "REGION-docker.pkg.dev/PROJECT_ID/label-guardian/label-guardian-ingestion-worker:TAG",
+              "commands": [
+                "--request-gcs-uri",
+                "gs://BUCKET_NAME/ops/ingestion-runs/RUN_ID/request.json",
+                "--phase",
+                "all"
+              ]
+            },
+            "environment": {
+              "variables": {
+                "LABEL_GUARDIAN_GCS_BUCKET": "BUCKET_NAME",
+                "LABEL_GUARDIAN_GCS_PROJECT": "PROJECT_ID"
+              },
+              "secretVariables": {
+                "LABEL_GUARDIAN_DATABASE_URL": "projects/PROJECT_ID/secrets/supabase-database-url-sync/versions/latest",
+                "KITTI_IMAGE_2_URL": "projects/PROJECT_ID/secrets/kitti-image-2-url/versions/latest",
+                "KITTI_LABEL_2_URL": "projects/PROJECT_ID/secrets/kitti-label-2-url/versions/latest",
+                "KITTI_CALIB_URL": "projects/PROJECT_ID/secrets/kitti-calib-url/versions/latest",
+                "KITTI_VELODYNE_URL": "projects/PROJECT_ID/secrets/kitti-velodyne-url/versions/latest"
+              }
+            }
+          }
+        ],
+        "computeResource": {
+          "cpuMilli": 8000,
+          "memoryMib": 32768
+        },
+        "maxRetryCount": 1,
+        "maxRunDuration": "28800s"
+      },
+      "taskCount": 1,
+      "parallelism": 1
+    }
+  ],
+  "allocationPolicy": {
+    "serviceAccount": {
+      "email": "label-guardian-ingestion-sa@PROJECT_ID.iam.gserviceaccount.com"
+    },
+    "instances": [
+      {
+        "policy": {
+          "machineType": "e2-standard-8",
+          "bootDisk": {
+            "sizeGb": 300
+          }
+        }
+      }
+    ]
+  },
+  "logsPolicy": {
+    "destination": "CLOUD_LOGGING"
+  }
+}

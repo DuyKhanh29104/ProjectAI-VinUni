@@ -1,0 +1,57 @@
+{
+  "taskGroups": [
+    {
+      "taskSpec": {
+        "runnables": [
+          {
+            "container": {
+              "imageUri": "asia-southeast1-docker.pkg.dev/ai-lab-16-gcp-505508/label-guardian/label-guardian-ingestion-worker:latest",
+              "commands": [
+                "--request-gcs-uri",
+                "gs://label_guardian_bucket/ops/ingestion-runs/nuscenes-trainval-smoke-fast/request.json",
+                "--phase",
+                "all"
+              ]
+            },
+            "environment": {
+              "variables": {
+                "LABEL_GUARDIAN_GCS_BUCKET": "label_guardian_bucket",
+                "LABEL_GUARDIAN_GCS_PROJECT": "ai-lab-16-gcp-505508"
+              },
+              "secretVariables": {
+                "LABEL_GUARDIAN_DATABASE_URL": "projects/ai-lab-16-gcp-505508/secrets/supabase-database-url-sync/versions/latest"
+              }
+            }
+          }
+        ],
+        "computeResource": {
+          "cpuMilli": 8000,
+          "memoryMib": 32768
+        },
+        "maxRetryCount": 1,
+        "maxRunDuration": "14400s"
+      },
+      "taskCount": 1,
+      "parallelism": 1
+    }
+  ],
+  "allocationPolicy": {
+    "serviceAccount": {
+      "email": "label-guardian-ingestion-sa@ai-lab-16-gcp-505508.iam.gserviceaccount.com"
+    },
+    "instances": [
+      {
+        "policy": {
+          "machineType": "e2-standard-8",
+          "bootDisk": {
+            "type": "pd-standard",
+            "sizeGb": 200
+          }
+        }
+      }
+    ]
+  },
+  "logsPolicy": {
+    "destination": "CLOUD_LOGGING"
+  }
+}

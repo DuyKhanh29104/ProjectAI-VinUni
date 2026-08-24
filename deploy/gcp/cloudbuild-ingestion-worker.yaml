@@ -1,0 +1,11 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - Dockerfile.ingestion-worker
+      - -t
+      - asia-southeast1-docker.pkg.dev/ai-lab-16-gcp-505508/label-guardian/label-guardian-ingestion-worker:latest
+      - .
+images:
+  - asia-southeast1-docker.pkg.dev/ai-lab-16-gcp-505508/label-guardian/label-guardian-ingestion-worker:latest

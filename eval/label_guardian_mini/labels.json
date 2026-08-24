@@ -1,0 +1,58 @@
+[
+  {
+    "name": "car",
+    "color": "#2563EB",
+    "type": "rectangle",
+    "attributes": [
+      {
+        "name": "track_id",
+        "mutable": true,
+        "input_type": "text",
+        "default_value": "",
+        "values": []
+      }
+    ]
+  },
+  {
+    "name": "pedestrian",
+    "color": "#16A34A",
+    "type": "rectangle",
+    "attributes": [
+      {
+        "name": "track_id",
+        "mutable": true,
+        "input_type": "text",
+        "default_value": "",
+        "values": []
+      }
+    ]
+  },
+  {
+    "name": "cyclist",
+    "color": "#9333EA",
+    "type": "rectangle",
+    "attributes": [
+      {
+        "name": "track_id",
+        "mutable": true,
+        "input_type": "text",
+        "default_value": "",
+        "values": []
+      }
+    ]
+  },
+  {
+    "name": "traffic_sign",
+    "color": "#EA580C",
+    "type": "rectangle",
+    "attributes": [
+      {
+        "name": "track_id",
+        "mutable": true,
+        "input_type": "text",
+        "default_value": "",
+        "values": []
+      }
+    ]
+  }
+]

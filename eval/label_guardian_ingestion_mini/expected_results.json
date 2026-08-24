@@ -1,0 +1,12 @@
+{
+  "reconciliation": {
+    "000000.png": {
+      "verified_objects": 1,
+      "needs_review_objects": 0,
+      "unmatched_objects": 0
+    }
+  },
+  "projection": {
+    "identity_cuboid": [40.0, 30.0, 60.0, 50.0]
+  }
+}

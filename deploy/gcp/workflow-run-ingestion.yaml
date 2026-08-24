@@ -1,0 +1,55 @@
+main:
+  params: [args]
+  steps:
+    - init:
+        assign:
+          - project: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
+          - location: ${default(map.get(args, "location"), "asia-southeast1")}
+          - bucket: ${default(map.get(args, "bucket"), "label_guardian_bucket")}
+          - run_id: ${map.get(args, "run_id")}
+          - batch_job_id: ${"label-guardian-" + run_id}
+          - request_uri: ${"gs://" + bucket + "/ops/ingestion-runs/" + run_id + "/request.json"}
+    - create_batch_job:
+        call: googleapis.batch.v1.projects.locations.jobs.create
+        args:
+          parent: ${"projects/" + project + "/locations/" + location}
+          jobId: ${batch_job_id}
+          body:
+            taskGroups:
+              - taskCount: 1
+                parallelism: 1
+                taskSpec:
+                  runnables:
+                    - container:
+                        imageUri: ${map.get(args, "image_uri")}
+                        commands:
+                          - "--request-gcs-uri"
+                          - ${request_uri}
+                          - "--phase"
+                          - "all"
+                      environment:
+                        variables:
+                          LABEL_GUARDIAN_GCS_BUCKET: ${bucket}
+                          LABEL_GUARDIAN_GCS_PROJECT: ${project}
+                        secretVariables:
+                          LABEL_GUARDIAN_DATABASE_URL: ${"projects/" + project + "/secrets/supabase-database-url-sync/versions/latest"}
+                  computeResource:
+                    cpuMilli: 4000
+                    memoryMib: 16384
+                  maxRetryCount: 1
+                  maxRunDuration: "14400s"
+            allocationPolicy:
+              serviceAccount:
+                email: ${"label-guardian-ingestion-sa@" + project + ".iam.gserviceaccount.com"}
+              instances:
+                - policy:
+                    machineType: "e2-standard-4"
+                    bootDisk:
+                      sizeGb: 100
+            logsPolicy:
+              destination: "CLOUD_LOGGING"
+    - return_job:
+        return:
+          run_id: ${run_id}
+          request_uri: ${request_uri}
+          batch_job: ${create_batch_job.name}

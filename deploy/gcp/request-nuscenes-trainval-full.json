@@ -1,0 +1,23 @@
+{
+  "dataset_type": "nuscenes",
+  "release": "v1.0-trainval",
+  "split": "trainval-full",
+  "modalities": ["camera", "labels", "calibration", "lidar"],
+  "raw_urls": {
+    "v1.0-trainval_meta.tgz": "https://d36yt3mvayqw5m.cloudfront.net/public/v1.0/v1.0-trainval_meta.tgz",
+    "v1.0-trainval01_blobs.tgz": "https://d36yt3mvayqw5m.cloudfront.net/public/v1.0/v1.0-trainval01_blobs.tgz",
+    "v1.0-trainval02_blobs.tgz": "https://d36yt3mvayqw5m.cloudfront.net/public/v1.0/v1.0-trainval02_blobs.tgz",
+    "v1.0-trainval03_blobs.tgz": "https://d36yt3mvayqw5m.cloudfront.net/public/v1.0/v1.0-trainval03_blobs.tgz",
+    "v1.0-trainval04_blobs.tgz": "https://d36yt3mvayqw5m.cloudfront.net/public/v1.0/v1.0-trainval04_blobs.tgz",
+    "v1.0-trainval05_blobs.tgz": "https://d36yt3mvayqw5m.cloudfront.net/public/v1.0/v1.0-trainval05_blobs.tgz",
+    "v1.0-trainval06_blobs.tgz": "https://d36yt3mvayqw5m.cloudfront.net/public/v1.0/v1.0-trainval06_blobs.tgz",
+    "v1.0-trainval07_blobs.tgz": "https://d36yt3mvayqw5m.cloudfront.net/public/v1.0/v1.0-trainval07_blobs.tgz",
+    "v1.0-trainval08_blobs.tgz": "https://d36yt3mvayqw5m.cloudfront.net/public/v1.0/v1.0-trainval08_blobs.tgz",
+    "v1.0-trainval09_blobs.tgz": "https://d36yt3mvayqw5m.cloudfront.net/public/v1.0/v1.0-trainval09_blobs.tgz",
+    "v1.0-trainval10_blobs.tgz": "https://d36yt3mvayqw5m.cloudfront.net/public/v1.0/v1.0-trainval10_blobs.tgz"
+  },
+  "source": "official",
+  "requested_by": "team",
+  "publish": true,
+  "run_id": "nuscenes-trainval-full"
+}

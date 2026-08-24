@@ -1,0 +1,19 @@
+# ---- Label Guardian cloud ingestion worker ----
+FROM python:3.12-slim
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+COPY pyproject.toml README.md ./
+COPY src ./src
+COPY scripts ./scripts
+
+RUN pip install --no-cache-dir ".[ingestion]"
+
+RUN useradd -m appuser && mkdir -p /tmp/label-guardian-cloud-worker && chown -R appuser:appuser /app /tmp/label-guardian-cloud-worker
+
+USER appuser
+
+ENTRYPOINT ["python", "-m", "src.services.ingestion.cloud_worker"]

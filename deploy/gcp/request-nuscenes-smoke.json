@@ -1,0 +1,11 @@
+{
+  "dataset_type": "nuscenes",
+  "release": "v1.0-mini",
+  "split": "smoke",
+  "max_frames": 5,
+  "modalities": ["camera", "labels", "calibration"],
+  "source": "official",
+  "requested_by": "team",
+  "publish": true,
+  "run_id": "nuscenes-smoke"
+}
