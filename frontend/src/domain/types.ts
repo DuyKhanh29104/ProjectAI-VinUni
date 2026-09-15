@@ -10,6 +10,22 @@ export type ReviewStatus =
   | "rejected"
   | "skipped";
 
+export type TaskWorkflowStage =
+  | "unassigned"
+  | "assigned"
+  | "in_progress"
+  | "submitted"
+  | "in_review"
+  | "changes_requested"
+  | "resubmitted"
+  | "approved";
+
+export type CaseOutcome =
+  "confirmed_issue" | "corrected" | "false_positive" | "escalated" | "skipped";
+
+export type BatchLifecycle =
+  "draft" | "ready" | "active" | "review" | "rework" | "approved" | "exported";
+
 export type Severity = "low" | "medium" | "high" | "critical";
 
 export type FindingType =
@@ -29,7 +45,8 @@ export type EvidenceKind = "geometry" | "model" | "temporal" | "context";
 
 export type QaRunStatus = "idle" | "running" | "completed";
 
-export type DemoMode = "ready" | "loading" | "empty" | "error" | "success" | "rejected";
+export type DemoMode =
+  "ready" | "loading" | "empty" | "error" | "success" | "rejected";
 
 export type ReviewAction =
   | "start_review"
@@ -37,6 +54,9 @@ export type ReviewAction =
   | "approve_correction"
   | "edit_annotation"
   | "annotator_feedback"
+  | "request_changes"
+  | "resubmit"
+  | "resolve_comment"
   | "reject_finding"
   | "skip"
   | "assign";
@@ -138,6 +158,9 @@ export interface Finding {
   riskScore: number;
   priority: number;
   status: ReviewStatus;
+  workflowStage: TaskWorkflowStage;
+  outcome?: CaseOutcome;
+  batchId: string;
   title: string;
   summary: string;
   explanation: string;
@@ -148,6 +171,37 @@ export interface Finding {
   assigneeId?: string;
   modelVersion: string;
   ruleVersion: string;
+}
+
+export interface WorkBatch {
+  id: string;
+  datasetId: string;
+  name: string;
+  customerName: string;
+  state: BatchLifecycle;
+  frameCount: number;
+  assignedCount: number;
+  submittedCount: number;
+  approvedCount: number;
+  ownerId: string;
+  dueAt: string;
+  createdAt: string;
+}
+
+export interface FeedbackComment {
+  id: string;
+  findingId: string;
+  authorId: string;
+  targetType: "frame" | "object" | "bbox";
+  targetId?: string;
+  annotationRevision?: number;
+  reasonCategory: "geometry" | "class" | "missing_label" | "tracking" | "other";
+  body: string;
+  blocking: boolean;
+  resolved: boolean;
+  createdAt: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
 }
 
 export interface ReviewDecision {
@@ -229,6 +283,8 @@ export interface MockState {
   predictions: PredictionRecord[];
   evidences: Evidence[];
   findings: Finding[];
+  batches: WorkBatch[];
+  feedbackComments: FeedbackComment[];
   reviewDecisions: ReviewDecision[];
   users: User[];
   reportMetrics: ReportMetrics;

@@ -12,5 +12,9 @@ services:
       RUN_MIGRATIONS: "false"
       DATABASE_URL: "${DATABASE_URL:?Set DATABASE_URL to the Supabase PostgreSQL URL in .env}"
       LABEL_GUARDIAN_DATABASE_URL: "${LABEL_GUARDIAN_DATABASE_URL:?Set LABEL_GUARDIAN_DATABASE_URL to the Supabase PostgreSQL URL in .env}"
-      DATASET_ROOT: "${DOCKER_DATASET_ROOT:-/app/data/shared/demo-v1/yolo}"
+      DATASET_BACKEND: "database"
+      DATASET_DEFAULT_SPLIT: "trainval-full"
+      DATASET_ID: "nuscenes"
+      DATASET_VERSION: "v1.0-trainval"
+      LABEL_GUARDIAN_GCS_CACHE_ROOT: "/app/data"
     depends_on: !reset null

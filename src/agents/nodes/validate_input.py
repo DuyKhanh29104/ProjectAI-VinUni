@@ -74,10 +74,14 @@ async def validate_input_node(state: LabelQAState) -> dict:
 
     metadata = dict(state.get("metadata") or {})
     image_path = Path(state["image_path"])
-    if image_path.is_file():
+    scope = metadata.get("label_scope") or {}
+    image_width, image_height = scope.get("image_width"), scope.get("image_height")
+    if image_path.is_file() or (image_width and image_height):
         try:
-            with Image.open(image_path) as image:
-                image_width, image_height = image.size
+            if image_path.is_file():
+                with Image.open(image_path) as image:
+                    image_width, image_height = image.size
+            image_width, image_height = int(image_width or 0), int(image_height or 0)
             scoped_gt, excluded_gt, clipped_gt = _scope_labels_to_image(
                 gt_labels,
                 image_width=image_width,

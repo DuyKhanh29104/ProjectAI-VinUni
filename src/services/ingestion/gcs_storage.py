@@ -1,12 +1,11 @@
-"""Google Cloud Storage adapter with the boto3 upload subset used by ingestion."""
+"""Google Cloud Storage adapter used by the ingestion pipeline."""
 
 from __future__ import annotations
 
 import io
+from collections.abc import Buffer
 from pathlib import Path
 from typing import Any, cast
-
-from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 
 from src.config import IngestionSettings
 from src.services.google_cloud import create_gcs_storage_client
@@ -56,34 +55,43 @@ class GCSBlobRangeReader(io.RawIOBase):
         self.position += len(payload)
         return payload
 
+    def readinto(self, buffer: Buffer) -> int:
+        view = memoryview(buffer).cast("B")
+        payload = self.read(len(view))
+        view[: len(payload)] = payload
+        return len(payload)
+
 
 class GCSObjectStorageClient:
-    """Small boto3-compatible subset backed by Google Cloud Storage."""
+    """Object-storage operations backed by Google Cloud Storage."""
 
     def __init__(self, settings: IngestionSettings) -> None:
         try:
             from google.api_core.exceptions import NotFound  # type: ignore[import-untyped]
         except ImportError as error:
-            raise RuntimeError(
-                "Google Cloud Storage support requires `pip install -e '.[ingestion]'`."
-            ) from error
+            raise RuntimeError("Google Cloud Storage support requires `pip install -e '.[ingestion]'`.") from error
 
         self.not_found_error = NotFound
         self.client = create_gcs_storage_client(settings)
 
-    def head_bucket(self, **kwargs: Any) -> None:
-        bucket_name = kwargs["Bucket"]
+    def bucket_exists(self, bucket_name: str) -> bool:
         try:
             self.client.get_bucket(bucket_name)
-        except self.not_found_error as error:
-            raise ClientError({"Error": {"Code": "404"}}, "HeadBucket") from error
+        except self.not_found_error:
+            return False
+        return True
 
-    def create_bucket(self, **kwargs: Any) -> None:
-        bucket_name = kwargs["Bucket"]
+    def create_bucket(self, bucket_name: str) -> None:
         self.client.create_bucket(bucket_name)
 
-    def upload_file(self, filename: str, bucket: str, key: str, **kwargs: Any) -> None:
-        content_type = (kwargs.get("ExtraArgs") or {}).get("ContentType")
+    def upload_file(
+        self,
+        filename: str,
+        bucket: str,
+        key: str,
+        *,
+        content_type: str | None = None,
+    ) -> None:
         blob = self.client.bucket(bucket).blob(key)
         blob.upload_from_filename(str(Path(filename)), content_type=content_type)
 
@@ -92,11 +100,11 @@ class GCSObjectStorageClient:
         destination.parent.mkdir(parents=True, exist_ok=True)
         self.client.bucket(bucket).blob(key).download_to_filename(str(destination))
 
-    def open_reader(self, bucket: str, key: str) -> GCSBlobRangeReader:
+    def open_reader(self, bucket: str, key: str) -> io.BufferedReader:
         blob = self.client.bucket(bucket).blob(key)
         blob.reload()
         size = int(blob.size or 0)
-        return GCSBlobRangeReader(blob, size)
+        return io.BufferedReader(GCSBlobRangeReader(blob, size), buffer_size=8 * 1024 * 1024)
 
     def object_exists(self, bucket: str, key: str) -> bool:
         return bool(self.client.bucket(bucket).blob(key).exists())

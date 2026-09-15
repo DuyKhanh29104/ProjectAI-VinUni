@@ -11,6 +11,7 @@ from typing import Any, Protocol, cast
 
 from src.agents.graph import agent
 from src.models.agent_schemas import LabelQAReport
+from src.models.inference_schemas import InferenceImageReference, InferenceRequest, InferenceResponse
 from src.models.real_dataset_schemas import (
     RealDatasetBBox,
     RealDatasetEvaluation,
@@ -20,6 +21,7 @@ from src.models.real_dataset_schemas import (
     RealDatasetMatch,
     RealDatasetPrediction,
 )
+from src.services.inference_client import InferenceClient, InferenceClientError
 from src.services.ingestion.yolo_detection_adapter import (
     YoloDatasetLayoutError,
     YoloDetectionAdapter,
@@ -43,9 +45,10 @@ class RealDatasetService:
         default_split: str = "val",
         dataset_id: str = "local-yolo",
         dataset_version: str = "workspace",
-        model_name: str = "yolo26n.pt",
+        model_name: str = "yolo26x.pt",
         evaluation_cache_entries: int = 128,
         agent_runner: LabelQAAgentRunner = agent,
+        inference_client: InferenceClient | None = None,
     ) -> None:
         self.root = Path(root).resolve()
         self.dataset_backend = dataset_backend
@@ -56,16 +59,21 @@ class RealDatasetService:
         self.evaluation_cache_entries = evaluation_cache_entries
         self.adapter = YoloDetectionAdapter(self.root)
         self.agent_runner = agent_runner
-        self._evaluation_cache: OrderedDict[tuple[str, str], dict[str, Any]] = OrderedDict()
+        self.inference_client = inference_client
+        self._evaluation_cache: OrderedDict[tuple[str, ...], dict[str, Any]] = OrderedDict()
         self._inference_lock = asyncio.Lock()
 
-    def _cached_evaluation(self, key: tuple[str, str]) -> dict[str, Any] | None:
+    @property
+    def uses_remote_inference(self) -> bool:
+        return self.inference_client is not None
+
+    def _cached_evaluation(self, key: tuple[str, ...]) -> dict[str, Any] | None:
         result = self._evaluation_cache.get(key)
         if result is not None:
             self._evaluation_cache.move_to_end(key)
         return result
 
-    def _store_evaluation(self, key: tuple[str, str], result: dict[str, Any]) -> None:
+    def _store_evaluation(self, key: tuple[str, ...], result: dict[str, Any]) -> None:
         self._evaluation_cache[key] = result
         self._evaluation_cache.move_to_end(key)
         while len(self._evaluation_cache) > self.evaluation_cache_entries:
@@ -131,11 +139,15 @@ class RealDatasetService:
         force: bool = False,
         image_override: RealDatasetImage | None = None,
         image_payload: bytes | None = None,
+        image_reference: InferenceImageReference | None = None,
+        inference_response: InferenceResponse | None = None,
         revision: int = 0,
     ) -> RealDatasetEvaluation:
         image = image_override or self.get_image(split, image_id)
-        cache_key = (split, f"{image_id}:revision:{revision}")
-        cached_result = None if force else self._cached_evaluation(cache_key)
+        dataset_id = image.dataset or self.dataset_id
+        dataset_version = image.release or self.dataset_version
+        cache_key = (dataset_id, dataset_version, split, image_id, f"revision:{revision}")
+        cached_result = None if force or inference_response is not None else self._cached_evaluation(cache_key)
         if cached_result is not None:
             return self._to_evaluation(image, cached_result, revision=revision, cached=True)
 
@@ -153,23 +165,74 @@ class RealDatasetService:
             for label, canonical in supported_ground_truth
         ]
 
-        async def invoke(image_path: Path) -> dict[str, Any]:
-            state = {
+        async def invoke(image_path: Path | str, pred_labels: list[dict] | None = None) -> dict[str, Any]:
+            state: dict[str, Any] = {
                 "image_path": str(image_path),
                 "gt_labels": ground_truth,
                 "metadata": {
+                    "label_scope": {"image_width": image.width, "image_height": image.height},
                     "dataset_split": split,
                     "dataset_image_id": image_id,
                     "unsupported_ground_truth_count": len(image.labels) - len(supported_ground_truth),
                 },
             }
+            if pred_labels is not None:
+                state["pred_labels"] = pred_labels
+                state["enable_rtdetr"] = False
             return await asyncio.to_thread(asyncio.run, self.agent_runner.ainvoke(state))
 
+        async def invoke_inference_response(response: InferenceResponse) -> dict[str, Any]:
+            pred_labels = [detection.model_dump(mode="json", by_alias=False) for detection in response.detections]
+            result = await invoke(image.image_url, pred_labels=pred_labels)
+            result = dict(result)
+            metadata = dict(result.get("metadata") or {})
+            metadata["inference_mode"] = "remote"
+            metadata["inference_model_name"] = response.model_name
+            metadata["inference_model_version"] = response.model_version
+            metadata["inference_latency_ms"] = response.latency_ms
+            metadata["inference_metadata"] = response.metadata
+            result["metadata"] = metadata
+            report = dict(result.get("qa_report", {}))
+            report["image_path"] = image.image_url
+            result["qa_report"] = report
+            return result
+
+        async def invoke_remote(reference: InferenceImageReference) -> dict[str, Any]:
+            if self.inference_client is None:
+                raise InferenceClientError("Remote inference client is not configured.")
+            try:
+                response = await self.inference_client.detect(InferenceRequest(image=reference))
+            except InferenceClientError as error:
+                return {
+                    "pred_labels": [],
+                    "matches": [],
+                    "unmatched_gt": [],
+                    "unmatched_pred": [],
+                    "qa_report": {
+                        "image_path": image.image_url,
+                        "status": "error",
+                        "summary": str(error),
+                        "metrics": {},
+                        "issues": [],
+                    },
+                    "metadata": {
+                        "inference_mode": "remote",
+                        "inference_error": str(error),
+                    },
+                }
+            return await invoke_inference_response(response)
+
         async with self._inference_lock:
-            cached_result = None if force else self._cached_evaluation(cache_key)
+            cached_result = None if force or inference_response is not None else self._cached_evaluation(cache_key)
             if cached_result is not None:
                 return self._to_evaluation(image, cached_result, revision=revision, cached=True)
-            if image_payload is None:
+            if inference_response is not None:
+                result = await invoke_inference_response(inference_response)
+            elif self.inference_client is not None:
+                if image_reference is None:
+                    raise FileNotFoundError("Remote inference requires a GCS image reference.")
+                result = await invoke_remote(image_reference)
+            elif image_payload is None:
                 result = await invoke(self.image_path(split, image_id))
             else:
                 suffix = Path(image.filename).suffix.lower()
@@ -194,13 +257,17 @@ class RealDatasetService:
         revision: int,
         cached: bool,
     ) -> RealDatasetEvaluation:
+        dataset_id = image.dataset or self.dataset_id
+        dataset_version = image.release or self.dataset_version
+        metadata = result.get("metadata") or {}
+        model_name = str(metadata.get("inference_model_version") or self.model_name)
         evaluation_key = ":".join(
             (
-                self.dataset_id,
-                self.dataset_version,
+                dataset_id,
+                dataset_version,
                 image.split,
                 image.id,
-                self.model_name,
+                model_name,
                 f"revision:{revision}",
             )
         )
@@ -226,9 +293,10 @@ class RealDatasetService:
         ]
         return RealDatasetEvaluation(
             evaluation_id=f"eval-{sha256(evaluation_key.encode()).hexdigest()[:24]}",
-            dataset_id=self.dataset_id,
-            dataset_version=self.dataset_version,
-            model_name=self.model_name,
+            annotation_revision=revision,
+            dataset_id=dataset_id,
+            dataset_version=dataset_version,
+            model_name=model_name,
             image=image,
             report=LabelQAReport.model_validate(result["qa_report"]),
             predictions=predictions,

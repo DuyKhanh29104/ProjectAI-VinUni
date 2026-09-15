@@ -2,6 +2,8 @@
 
 Label Guardian là hệ thống QA và chỉnh sửa nhãn camera 2D cho dữ liệu perception. QA Agent phát hiện lỗi, xếp hạng rủi ro và tạo case; người dùng review rồi chỉnh trực tiếp bằng 2D Editor tích hợp.
 
+Xem kiến trúc tổng thể tại [ARCHITECTURE.md](ARCHITECTURE.md) và mục lục tài liệu tại [docs/README.md](docs/README.md).
+
 ## Luồng chính
 
 ```text
@@ -22,7 +24,7 @@ Dataset → Ingestion → Model inference + QA Agent → QA Queue
 Yêu cầu Python 3.12+, Node.js 20+ và PostgreSQL.
 
 ```powershell
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[agent-yolo,ingestion]" --group dev
 Copy-Item .env.example .env
 alembic upgrade head
 python -m uvicorn src.main:app --reload
@@ -73,14 +75,18 @@ python -m ruff check src tests migrations
 python -m pytest -q
 cd frontend
 npm run typecheck
-npm test -- --run
+npm test
 npm run build
 ```
 
-PostgreSQL test phải là database riêng. Xem [docs/TESTING.md](docs/TESTING.md) và [docs/LABEL_GUARDIAN_ARCHITECTURE.md](docs/LABEL_GUARDIAN_ARCHITECTURE.md).
+PostgreSQL test phải là database riêng. Xem [docs/TESTING.md](docs/TESTING.md) và [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Deploy
 
-Production dùng Vercel cho React/Vite SPA, Railway cho FastAPI container, Supabase cho Auth/PostgreSQL và GCS private cho ảnh. Railway chạy migration ở pre-deploy và health check `/ready`; Vercel đã có SPA rewrite trong `frontend/vercel.json`.
+Production dùng Vercel cho React/Vite SPA, GCP VM cho FastAPI/Caddy/Agent runtime, Supabase cho Auth/PostgreSQL và GCS private cho ảnh. Push vào `main` của deploy repo kích hoạt Vercel frontend và GitHub Actions self-hosted để migrate/deploy backend an toàn.
 
-Xem checklist, biến môi trường mẫu và smoke test tại [docs/CLOUD_DEPLOYMENT.md](docs/CLOUD_DEPLOYMENT.md).
+Xem runbook production tại [docs/HYBRID_VERCEL_VM_DEPLOYMENT.md](docs/HYBRID_VERCEL_VM_DEPLOYMENT.md).
+
+## Đóng góp và bảo mật
+
+Đọc [CONTRIBUTING.md](CONTRIBUTING.md) trước khi thay đổi code hoặc tài liệu. Lỗ hổng và sự cố credential phải được xử lý theo [SECURITY.md](SECURITY.md), không báo kèm secret qua public issue.

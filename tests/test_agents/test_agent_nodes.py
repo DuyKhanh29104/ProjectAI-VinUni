@@ -1,10 +1,11 @@
+import json
 from pathlib import Path
 
 import pytest
 from PIL import Image
 
 from src.agents.geometry import iou
-from src.agents.nodes.flagging import flag_issues_node
+from src.agents.nodes.flagging import flag_issues, flag_issues_node
 from src.agents.nodes.load_gt_labels import load_gt_labels_node
 from src.agents.nodes.matching import match_labels_node
 from src.agents.nodes.metrics import compute_metrics_node
@@ -52,6 +53,43 @@ async def test_loads_class_names_from_export_root_with_nonstandard_filename(tmp_
 
 
 @pytest.mark.asyncio
+async def test_loads_golden_json_ground_truth(tmp_path: Path):
+    image_path = tmp_path / "frame.png"
+    label_path = tmp_path / "source.json"
+    Image.new("RGB", (100, 80)).save(image_path)
+    label_path.write_text(
+        json.dumps(
+            {
+                "image_id": "frame",
+                "image_width": 100,
+                "image_height": 80,
+                "labels": [
+                    {
+                        "label_id": "source-frame-001",
+                        "class_name": "car",
+                        "bbox": {"x1": 10, "y1": 20, "x2": 40, "y2": 60},
+                        "attributes": {"occluded": None, "truncated": None},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = await load_gt_labels_node({"image_path": str(image_path), "label_path": str(label_path)})
+
+    assert result == {
+        "gt_labels": [
+            {
+                "label_id": "source-frame-001",
+                "class_name": "car",
+                "bbox": {"x1": 10.0, "y1": 20.0, "x2": 40.0, "y2": 60.0},
+            }
+        ]
+    }
+
+
+@pytest.mark.asyncio
 async def test_matching_metrics_and_flagging_preserve_rule_based_decisions():
     gt_labels = [{"label_id": "gt-1", "class_name": "car", "bbox": {"x1": 0, "y1": 0, "x2": 10, "y2": 10}}]
     pred_labels = [
@@ -69,6 +107,94 @@ async def test_matching_metrics_and_flagging_preserve_rule_based_decisions():
     assert metrics["metrics"]["class_accuracy"] == 0.0
     assert flagged["flagged_issues"][0]["issue_type"] == "wrong_class"
     assert flagged["flagged_issues"][0]["severity"] == "high"
+
+
+@pytest.mark.asyncio
+async def test_wrong_class_below_confidence_floor_is_not_accused():
+    gt_labels = [{"label_id": "gt-1", "class_name": "pedestrian", "bbox": {"x1": 0, "y1": 0, "x2": 10, "y2": 10}}]
+    pred_labels = [{"class_name": "car", "bbox": {"x1": 0, "y1": 0, "x2": 10, "y2": 10}, "confidence": 0.4}]
+
+    matched = await match_labels_node({"gt_labels": gt_labels, "pred_labels": pred_labels})
+    metrics = await compute_metrics_node(matched)
+    flagged = await flag_issues_node({**matched, **metrics, "gt_labels": gt_labels})
+
+    # Vị trí khớp hoàn hảo nhưng detector chỉ tự tin 0.4 rằng đó là car —
+    # không đủ bằng chứng để buộc tội sai class.
+    assert flagged["flagged_issues"] == []
+
+
+@pytest.mark.asyncio
+async def test_sibling_vehicle_confusion_needs_near_certainty():
+    gt_labels = [{"label_id": "gt-1", "class_name": "car", "bbox": {"x1": 0, "y1": 0, "x2": 10, "y2": 10}}]
+    pred_labels = [{"class_name": "truck", "bbox": {"x1": 0, "y1": 0, "x2": 10, "y2": 10}, "confidence": 0.7}]
+
+    matched = await match_labels_node({"gt_labels": gt_labels, "pred_labels": pred_labels})
+    metrics = await compute_metrics_node(matched)
+    flagged = await flag_issues_node({**matched, **metrics, "gt_labels": gt_labels})
+
+    # car/truck là nhóm dễ nhầm lẫn: 0.7 vẫn chưa đủ để buộc tội.
+    assert flagged["flagged_issues"] == []
+
+
+def test_missing_label_low_band_is_advisory_only():
+    unmatched_pred = [
+        {
+            "class_name": "car",
+            "bbox": {"x1": 0, "y1": 0, "x2": 20, "y2": 20},
+            "confidence": 0.5,
+            "best_iou": 0.0,
+            "prediction_index": 0,
+        }
+    ]
+
+    issues = flag_issues([], [], unmatched_pred, [])
+
+    assert len(issues) == 1
+    assert issues[0]["issue_type"] == "missing_label"
+    assert issues[0]["severity"] == "low"
+    assert issues[0]["blocking"] is False
+
+
+def test_missing_label_below_low_band_is_not_flagged():
+    unmatched_pred = [
+        {
+            "class_name": "car",
+            "bbox": {"x1": 0, "y1": 0, "x2": 20, "y2": 20},
+            "confidence": 0.3,
+            "best_iou": 0.0,
+            "prediction_index": 0,
+        }
+    ]
+
+    assert flag_issues([], [], unmatched_pred, []) == []
+
+
+def test_extra_label_area_gate_skips_tiny_labels():
+    tiny = {"label_id": "gt-1", "class_name": "car", "bbox": {"x1": 0, "y1": 0, "x2": 20, "y2": 20}, "best_iou": 0.0}
+    large = {"label_id": "gt-2", "class_name": "car", "bbox": {"x1": 0, "y1": 0, "x2": 100, "y2": 100}, "best_iou": 0.0}
+
+    # 20x20 trên ảnh 1600x900 (~0.03% diện tích): detector bỏ sót vật thể nhỏ
+    # là chuyện thường, không đủ bằng chứng bỏ tội "nhãn thừa".
+    assert flag_issues([], [tiny], [], [tiny], image_size=(1600, 900)) == []
+    # 100x100 (~0.7% diện tích): đủ lớn để nghi ngờ.
+    issues = flag_issues([], [large], [], [large], image_size=(1600, 900))
+    assert [issue["issue_type"] for issue in issues] == ["extra_or_wrong_label"]
+
+
+@pytest.mark.asyncio
+async def test_flagging_node_uses_image_size_from_label_scope():
+    tiny = [{"label_id": "gt-1", "class_name": "car", "bbox": {"x1": 0, "y1": 0, "x2": 20, "y2": 10}}]
+    state = {
+        "matches": [],
+        "unmatched_gt": [{**tiny[0], "best_iou": 0.0}],
+        "unmatched_pred": [],
+        "gt_labels": tiny,
+        "metadata": {"label_scope": {"image_width": 1600, "image_height": 900}},
+    }
+
+    flagged = await flag_issues_node(state)
+
+    assert flagged["flagged_issues"] == []
 
 
 @pytest.mark.asyncio
@@ -138,3 +264,79 @@ async def test_yolo_load_failure_becomes_pipeline_error(monkeypatch: pytest.Monk
     result = await run_yolo_inference_node({"image_path": "fixture.png"})
 
     assert "ultralytics is not installed" in result["error"]
+
+
+@pytest.mark.asyncio
+async def test_yolo_inference_records_latency_metadata(monkeypatch: pytest.MonkeyPatch):
+    class FakeTensor:
+        def __init__(self, value):
+            self.value = value
+
+        def __getitem__(self, _index):
+            return self
+
+        def tolist(self):
+            return self.value
+
+        def __float__(self):
+            return float(self.value)
+
+        def __int__(self):
+            return int(self.value)
+
+    class FakeBox:
+        def __init__(self):
+            self.xyxy = [FakeTensor([1.0, 2.0, 3.0, 4.0])]
+            self.cls = [FakeTensor(2)]
+            self.conf = [FakeTensor(0.9)]
+
+    class FakeResult:
+        def __init__(self):
+            self.names = {2: "car"}
+            self.boxes = [FakeBox()]
+            self.speed = {"preprocess": 1.25, "inference": 2.5, "postprocess": 0.75}
+
+    class FakeModel:
+        names = {0: "person", 2: "car"}
+
+        def __call__(self, image_path, **kwargs):
+            assert image_path == "fixture.png"
+            assert kwargs["conf"] == 0.4
+            assert kwargs["classes"] == [0, 2]
+            return [FakeResult()]
+
+    settings = type("SettingsStub", (), {"yolo_confidence_threshold": 0.4})()
+    monkeypatch.setattr("src.agents.nodes.yolo_inference.get_settings", lambda: settings)
+    monkeypatch.setattr("src.agents.nodes.yolo_inference.get_yolo_model", lambda: FakeModel())
+    monkeypatch.setattr("src.agents.nodes.yolo_inference.TARGET_DETECTION_CLASSES", ["person", "car"])
+
+    result = await run_yolo_inference_node({"image_path": "fixture.png"})
+
+    assert result["pred_labels"] == [
+        {"class_name": "car", "bbox": {"x1": 1.0, "y1": 2.0, "x2": 3.0, "y2": 4.0}, "confidence": 0.9}
+    ]
+    assert result["metadata"]["yolo_latency_ms"]["model_load"] >= 0
+    assert result["metadata"]["yolo_latency_ms"]["inference_wall"] >= 0
+    assert result["metadata"]["yolo_latency_ms"]["preprocess"] == 1.25
+    assert result["metadata"]["yolo_latency_ms"]["inference"] == 2.5
+    assert result["metadata"]["yolo_latency_ms"]["postprocess"] == 0.75
+
+
+@pytest.mark.asyncio
+async def test_remote_predictions_use_image_dimensions_for_scope():
+    from src.agents.nodes.validate_input import validate_input_node
+
+    result = await validate_input_node(
+        {
+            "image_path": "https://example.invalid/frame.png",
+            "gt_labels": [
+                {"label_id": "inside", "class_name": "car", "bbox": {"x1": -5, "y1": 10, "x2": 30, "y2": 30}},
+                {"label_id": "outside", "class_name": "car", "bbox": {"x1": 150, "y1": 10, "x2": 180, "y2": 30}},
+            ],
+            "pred_labels": [],
+            "metadata": {"label_scope": {"image_width": 100, "image_height": 80}},
+        }
+    )
+    assert [label["label_id"] for label in result["gt_labels"]] == ["inside"]
+    assert result["gt_labels"][0]["bbox"]["x1"] == 0
+    assert result["metadata"]["label_scope"]["ground_truth_excluded_outside"] == 1

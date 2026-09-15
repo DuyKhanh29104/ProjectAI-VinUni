@@ -17,8 +17,9 @@ const categoryLabels: Record<string, string> = {
 export function SettingsView() {
   const { state, actions } = useMockData();
   const auth = useAuth();
-  const activeRole = auth.enabled ? auth.user?.role : state.activeRole;
-  const usersQuery = useApplicationUsersQuery(auth.enabled && activeRole === "admin");
+  const liveAuth = auth.enabled && !auth.isDemoSession;
+  const activeRole = auth.user?.role ?? state.activeRole;
+  const usersQuery = useApplicationUsersQuery(liveAuth && activeRole === "admin");
   const updateRole = useUpdateApplicationUserRoleMutation();
 
   if (activeRole !== "admin") {
@@ -34,22 +35,22 @@ export function SettingsView() {
   return (
     <div className="page-container view-page settings-page">
       <div className="page-heading">
-        <div><span className="eyebrow">Access & configuration</span><h1>Cấu hình QA</h1><p className="page-description">{auth.enabled ? "Quản lý role người dùng cho API production." : "Bật/tắt rule và điều chỉnh threshold trong frontend state mock."}</p></div>
+        <div><span className="eyebrow">Access & configuration</span><h1>Cấu hình QA</h1><p className="page-description">{liveAuth ? "Quản lý role người dùng cho API production." : "Bật/tắt rule và điều chỉnh threshold trong frontend state mock."}</p></div>
         <Badge tone="info">Admin workspace</Badge>
       </div>
 
       <Card className="privacy-safe-card settings-safe-card">
         <div className="privacy-safe-icon">i</div>
         <div>
-          <strong>{auth.enabled ? "RBAC đang hoạt động" : "Configuration sandbox"}</strong>
-          <p>{auth.enabled
+          <strong>{liveAuth ? "RBAC đang hoạt động" : "Configuration sandbox"}</strong>
+          <p>{liveAuth
             ? "Phân quyền người dùng được lưu qua API và PostgreSQL."
             : "Không có model, rule engine hoặc API thật được gọi từ màn hình này. Cấu hình được lưu trong localStorage mock."}</p>
         </div>
-        <Badge tone="success">{auth.enabled ? "Auth live" : "Mock only"}</Badge>
+        <Badge tone="success">{liveAuth ? "Auth live" : "Demo session"}</Badge>
       </Card>
 
-      {auth.enabled ? (
+      {liveAuth ? (
         <Card>
           <div className="settings-card-heading">
             <SectionHeading
@@ -93,7 +94,7 @@ export function SettingsView() {
         </Card>
       ) : null}
 
-      {!auth.enabled ? <div className="settings-grid">
+      {!liveAuth ? <div className="settings-grid">
         <Card>
           <div className="settings-card-heading"><SectionHeading eyebrow="Rule registry" title="QA rules" description="Threshold sẽ được chụp vào QA run khi bạn bấm Start." /><Badge tone="info">{state.rules.filter((rule) => rule.enabled).length}/{state.rules.length} enabled</Badge></div>
           <div className="config-list">{state.rules.map((rule) => <div className="config-row" key={rule.id}>

@@ -13,7 +13,7 @@ export const appRoutes: AppRouteDefinition[] = [
   {
     id: "overview",
     label: "Tổng quan QA",
-    path: "/",
+    path: "/overview",
     description: "KPI, mức độ rủi ro và tình hình review dataset.",
     phase: "next",
     allowedRoles: ["reviewer", "annotator", "admin"],
@@ -30,7 +30,8 @@ export const appRoutes: AppRouteDefinition[] = [
     id: "qa-cases",
     label: "QA Cases",
     path: "/qa-cases",
-    description: "Danh sách finding do Agent tạo, tách biệt khỏi hàng đợi chạy QA.",
+    description:
+      "Danh sách finding do Agent tạo, tách biệt khỏi hàng đợi chạy QA.",
     phase: "next",
     allowedRoles: ["reviewer", "annotator", "admin"],
   },
@@ -38,7 +39,8 @@ export const appRoutes: AppRouteDefinition[] = [
     id: "case-detail",
     label: "Case review",
     path: "/cases/:findingId",
-    description: "Frame viewer, sequence, agent evidence và thao tác phê duyệt.",
+    description:
+      "Frame viewer, sequence, agent evidence và thao tác phê duyệt.",
     phase: "next",
     allowedRoles: ["reviewer", "annotator", "admin"],
   },
@@ -46,7 +48,8 @@ export const appRoutes: AppRouteDefinition[] = [
     id: "annotator-workspace",
     label: "2D Editor",
     path: "/editor",
-    description: "Công cụ chính để chỉnh sửa, lưu revision và khôi phục nhãn 2D.",
+    description:
+      "Công cụ chính để chỉnh sửa, lưu revision và khôi phục nhãn 2D.",
     phase: "next",
     allowedRoles: ["reviewer", "annotator", "admin"],
   },
@@ -81,6 +84,14 @@ export const appRoutes: AppRouteDefinition[] = [
     description: "Dataset version, rule threshold, model version và user mock.",
     phase: "next",
     allowedRoles: ["admin"],
+  },
+  {
+    id: "tutorial",
+    label: "Hướng dẫn",
+    path: "/tutorial",
+    description: "Hướng dẫn bắt đầu và checklist theo từng vai trò.",
+    phase: "next",
+    allowedRoles: ["reviewer", "annotator", "admin"],
   },
 ];
 

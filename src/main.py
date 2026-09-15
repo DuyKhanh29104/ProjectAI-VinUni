@@ -13,6 +13,7 @@ from src.db.session import create_database_engine, create_session_factory
 from src.models.schemas import ServiceHealthResponse
 from src.services.auth_service import SupabaseJwtVerifier, TokenVerifier
 from src.services.google_cloud import create_gcs_storage_client
+from src.services.inference_client import RemoteInferenceClient
 from src.services.real_dataset_service import RealDatasetService
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,11 @@ def create_app(
     database_engine = None
     application_session_factory = db_session_factory
     if application_session_factory is None:
-        database_engine = create_database_engine(app_settings.database_url)
+        database_engine = create_database_engine(
+            app_settings.database_url,
+            pool_size=app_settings.database_pool_size,
+            max_overflow=app_settings.database_max_overflow,
+        )
         application_session_factory = create_session_factory(database_engine)
 
     @asynccontextmanager
@@ -46,6 +51,17 @@ def create_app(
         application.state.auth_verifier = auth_verifier or (
             SupabaseJwtVerifier(app_settings) if app_settings.auth_enabled else None
         )
+        inference_client = None
+        if app_settings.inference_mode == "remote":
+            inference_client = RemoteInferenceClient(
+                base_url=app_settings.inference_service_url or "",
+                token=(
+                    app_settings.inference_service_token.get_secret_value()
+                    if app_settings.inference_service_token
+                    else None
+                ),
+                timeout_seconds=app_settings.inference_request_timeout_seconds,
+            )
         application.state.real_dataset_service = real_dataset_service or RealDatasetService(
             app_settings.dataset_root,
             dataset_backend=app_settings.dataset_backend,
@@ -54,6 +70,7 @@ def create_app(
             dataset_version=app_settings.dataset_version,
             model_name=app_settings.yolo_model_name,
             evaluation_cache_entries=app_settings.agent_evaluation_cache_entries,
+            inference_client=inference_client,
         )
         logger.info("Starting %s in %s mode", app_settings.app_name, app_settings.app_env)
         try:
@@ -74,20 +91,14 @@ def create_app(
         CORSMiddleware,
         allow_origins=app_settings.cors_origin_values,
         allow_credentials=False,
-        allow_methods=["GET", "POST", "PUT", "PATCH", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     )
 
     @application.get(
         "/health",
         response_model=ServiceHealthResponse,
         tags=["System"],
-    )
-    @application.get(
-        "/api/health",
-        response_model=ServiceHealthResponse,
-        tags=["System"],
-        include_in_schema=False,
     )
     @application.get(
         "/api/v1/health",
@@ -121,10 +132,6 @@ def create_app(
             version=app_settings.app_version,
         )
 
-    # `/api/v1` is the canonical public surface. Keep the unversioned routes as
-    # compatibility aliases while clients migrate, but omit them from OpenAPI so
-    # generated clients only discover the stable V1 contract.
-    application.include_router(router, prefix="/api", include_in_schema=False)
     application.include_router(router, prefix="/api/v1")
     return application
 

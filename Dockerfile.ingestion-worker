@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # ---- Label Guardian cloud ingestion worker ----
 FROM python:3.12-slim
 
@@ -6,13 +8,18 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
+# Dependency manifests are copied before application source so ordinary code
+# changes keep the expensive Python dependency layer cached.
 COPY pyproject.toml README.md ./
-COPY src ./src
-COPY scripts ./scripts
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    pip install ".[ingestion]"
 
-RUN pip install --no-cache-dir ".[ingestion]"
+RUN useradd -m appuser && mkdir -p /tmp/label-guardian-cloud-worker
 
-RUN useradd -m appuser && mkdir -p /tmp/label-guardian-cloud-worker && chown -R appuser:appuser /app /tmp/label-guardian-cloud-worker
+COPY --chown=appuser:appuser src ./src
+COPY --chown=appuser:appuser scripts ./scripts
+
+RUN chown -R appuser:appuser /tmp/label-guardian-cloud-worker
 
 USER appuser
 

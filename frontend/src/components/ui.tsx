@@ -1,4 +1,8 @@
-import type { ButtonHTMLAttributes, HTMLAttributes, PropsWithChildren } from "react";
+import type {
+  ButtonHTMLAttributes,
+  HTMLAttributes,
+  PropsWithChildren,
+} from "react";
 import type { ReviewStatus, Severity } from "../domain/types";
 
 export function Card({
@@ -93,13 +97,13 @@ export function SectionHeading({
   title,
   description,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description?: string;
 }) {
   return (
     <div className="section-heading">
-      <span className="eyebrow">{eyebrow}</span>
+      {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
       <h2>{title}</h2>
       {description ? <p className="muted">{description}</p> : null}
     </div>

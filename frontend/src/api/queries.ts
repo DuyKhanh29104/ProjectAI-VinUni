@@ -6,10 +6,34 @@ export const apiQueryKeys = {
   qaCases: ["api-v1", "qa-cases"] as const,
   qaCasesForImage: (split?: string, imageId?: string) =>
     ["api-v1", "qa-cases", split, imageId] as const,
-  realDatasetImages: (split: string | undefined, dataset: string | undefined, offset: number) =>
-    ["api-v1", "dataset", "images", split, dataset, offset] as const,
-  realDatasetFrameSamples: (split: string | undefined, dataset: string | undefined, offset: number) =>
-    ["api-v1", "dataset", "frame-samples", split, dataset, offset] as const,
+  realDatasetImages: (
+    split: string | undefined,
+    dataset: string | undefined,
+    offset: number,
+  ) => ["api-v1", "dataset", "images", split, dataset, offset] as const,
+  realDatasetFrameSamples: (
+    split: string | undefined,
+    dataset: string | undefined,
+    offset: number,
+    sequenceId?: string,
+    limit?: number,
+  ) =>
+    [
+      "api-v1",
+      "dataset",
+      "frame-samples",
+      split,
+      dataset,
+      offset,
+      sequenceId,
+      limit,
+    ] as const,
+  realDatasetFrameSequences: (
+    split: string | undefined,
+    dataset: string | undefined,
+  ) => ["api-v1", "dataset", "frame-sequences", split, dataset] as const,
+  realDatasetEvaluation: (split?: string, imageId?: string) =>
+    ["api-v1", "dataset", "evaluation", split, imageId] as const,
   annotations: (split?: string, imageId?: string) =>
     ["api-v1", "dataset", "annotations", split, imageId] as const,
   annotationHistory: (split?: string, imageId?: string) =>
@@ -28,36 +52,92 @@ export function useApplicationUsersQuery(enabled = true) {
 export function useUpdateApplicationUserRoleMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: "annotator" | "reviewer" | "admin" }) =>
-      labelGuardianApiV1.updateApplicationUserRole(userId, role),
-    onSuccess: async () => queryClient.invalidateQueries({ queryKey: apiQueryKeys.applicationUsers }),
+    mutationFn: ({
+      userId,
+      role,
+    }: {
+      userId: string;
+      role: "annotator" | "reviewer" | "admin";
+    }) => labelGuardianApiV1.updateApplicationUserRole(userId, role),
+    onSuccess: async () =>
+      queryClient.invalidateQueries({
+        queryKey: apiQueryKeys.applicationUsers,
+      }),
   });
 }
 
 export function useQaCasesQuery(
-  filters: { split?: string; sourceImageId?: string } = {},
+  filters: { split?: string; datasetId?: string; sourceImageId?: string } = {},
   enabled = true,
 ) {
   return useQuery({
     queryKey: filters.sourceImageId
       ? apiQueryKeys.qaCasesForImage(filters.split, filters.sourceImageId)
-      : apiQueryKeys.qaCases,
+      : [...apiQueryKeys.qaCases, filters.datasetId, filters.split],
     queryFn: ({ signal }) => labelGuardianApiV1.listQaCases(signal, filters),
     enabled,
   });
 }
 
-export function useRealDatasetImagesQuery(split: string | undefined, offset: number, dataset?: string) {
+export function useRealDatasetImagesQuery(
+  split: string | undefined,
+  offset: number,
+  dataset?: string,
+) {
   return useQuery({
     queryKey: apiQueryKeys.realDatasetImages(split, dataset, offset),
-    queryFn: ({ signal }) => labelGuardianApiV1.listRealDatasetImages(split, offset, signal, dataset),
+    queryFn: ({ signal }) =>
+      labelGuardianApiV1.listRealDatasetImages(split, offset, signal, dataset),
   });
 }
 
-export function useRealDatasetFrameSamplesQuery(split: string | undefined, offset: number, dataset?: string) {
+export function useRealDatasetFrameSamplesQuery(
+  split: string | undefined,
+  offset: number,
+  dataset?: string,
+  sequenceId?: string,
+  limit?: number,
+) {
   return useQuery({
-    queryKey: apiQueryKeys.realDatasetFrameSamples(split, dataset, offset),
-    queryFn: ({ signal }) => labelGuardianApiV1.listRealDatasetFrameSamples(split, offset, signal, dataset),
+    queryKey: apiQueryKeys.realDatasetFrameSamples(
+      split,
+      dataset,
+      offset,
+      sequenceId,
+      limit,
+    ),
+    queryFn: ({ signal }) =>
+      labelGuardianApiV1.listRealDatasetFrameSamples(
+        split,
+        offset,
+        signal,
+        dataset,
+        sequenceId,
+        limit,
+      ),
+  });
+}
+
+export function useRealDatasetFrameSequencesQuery(
+  split: string | undefined,
+  dataset?: string,
+) {
+  return useQuery({
+    queryKey: apiQueryKeys.realDatasetFrameSequences(split, dataset),
+    queryFn: ({ signal }) =>
+      labelGuardianApiV1.listRealDatasetFrameSequences(split, signal, dataset),
+  });
+}
+
+export function useRealDatasetImageEvaluationQuery(split?: string, imageId?: string, enabled = true) {
+  return useQuery({
+    queryKey: apiQueryKeys.realDatasetEvaluation(split, imageId),
+    queryFn: ({ signal }) => {
+      if (!split || !imageId) throw new Error("Split and image ID are required.");
+      return labelGuardianApiV1.getRealDatasetImageEvaluation(split, imageId, signal);
+    },
+    enabled: enabled && Boolean(split && imageId),
+    staleTime: 15_000,
   });
 }
 
@@ -81,8 +161,46 @@ export function useEvaluateRealDatasetImageMutation() {
         force,
         persist,
       ),
-    onSuccess: async () =>
-      queryClient.invalidateQueries({ queryKey: apiQueryKeys.qaCases }),
+    onSuccess: async (data, variables) => {
+      queryClient.setQueryData(
+        apiQueryKeys.realDatasetEvaluation(variables.split, variables.imageId),
+        data,
+      );
+      await queryClient.invalidateQueries({ queryKey: apiQueryKeys.qaCases });
+    },
+  });
+}
+
+export function useEvaluateRealDatasetBatchMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      split,
+      imageIds,
+      force = false,
+      persist = true,
+    }: {
+      split: string;
+      imageIds: string[];
+      force?: boolean;
+      persist?: boolean;
+    }) =>
+      labelGuardianApiV1.evaluateRealDatasetImagesBatch(
+        split,
+        imageIds,
+        force,
+        persist,
+      ),
+    onSuccess: async (data, variables) => {
+      data.results.forEach((result) => {
+        if (!result.evaluation) return;
+        queryClient.setQueryData(
+          apiQueryKeys.realDatasetEvaluation(variables.split, result.imageId),
+          result.evaluation,
+        );
+      });
+      await queryClient.invalidateQueries({ queryKey: apiQueryKeys.qaCases });
+    },
   });
 }
 
@@ -109,8 +227,12 @@ export function useQaCaseStatusMutation() {
 export function useImageAnnotationsQuery(split?: string, imageId?: string) {
   return useQuery({
     queryKey: apiQueryKeys.annotations(split, imageId),
-    queryFn: ({ signal }) =>
-      labelGuardianApiV1.getImageAnnotations(split!, imageId!, signal),
+    queryFn: ({ signal }) => {
+      if (!split || !imageId) {
+        throw new Error("Split and image ID are required to load annotations.");
+      }
+      return labelGuardianApiV1.getImageAnnotations(split, imageId, signal);
+    },
     enabled: Boolean(split && imageId),
   });
 }
@@ -118,8 +240,18 @@ export function useImageAnnotationsQuery(split?: string, imageId?: string) {
 export function useAnnotationHistoryQuery(split?: string, imageId?: string) {
   return useQuery({
     queryKey: apiQueryKeys.annotationHistory(split, imageId),
-    queryFn: ({ signal }) =>
-      labelGuardianApiV1.getImageAnnotationHistory(split!, imageId!, signal),
+    queryFn: ({ signal }) => {
+      if (!split || !imageId) {
+        throw new Error(
+          "Split and image ID are required to load annotation history.",
+        );
+      }
+      return labelGuardianApiV1.getImageAnnotationHistory(
+        split,
+        imageId,
+        signal,
+      );
+    },
     enabled: Boolean(split && imageId),
   });
 }
@@ -208,5 +340,13 @@ export function useRestoreAnnotationsMutation() {
         queryClient.invalidateQueries({ queryKey: apiQueryKeys.qaCases }),
       ]);
     },
+  });
+}
+
+export function usePipelineRunsQuery(enabled = true) {
+  return useQuery({
+    queryKey: ["api-v1", "ingestion", "runs"],
+    queryFn: ({ signal }) => labelGuardianApiV1.listPipelineRuns(signal),
+    enabled,
   });
 }

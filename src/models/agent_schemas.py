@@ -34,7 +34,7 @@ class YoloPrediction(BaseModel):
 
 class LabelQARequest(BaseModel):
     image_path: str = Field(min_length=1, description="Local image path for the offline agent")
-    label_path: str | None = Field(default=None, description="Optional YOLO or Pascal VOC label path")
+    label_path: str | None = Field(default=None, description="Optional YOLO, Pascal VOC, or golden JSON label path")
     gt_labels: list[GroundTruthLabel] | None = None
     pred_labels: list[YoloPrediction] | None = None
 

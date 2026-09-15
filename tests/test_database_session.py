@@ -90,3 +90,15 @@ def test_conventional_postgres_url_uses_asyncpg_driver() -> None:
 
     assert engine.url.drivername == "postgresql+asyncpg"
     engine.sync_engine.dispose()
+
+
+def test_database_engine_uses_configured_pool_limits() -> None:
+    engine = create_database_engine(
+        "postgresql://user:password@db.example.test:5432/label_guardian",
+        pool_size=3,
+        max_overflow=0,
+    )
+
+    assert engine.sync_engine.pool.size() == 3
+    assert engine.sync_engine.pool._max_overflow == 0
+    engine.sync_engine.dispose()

@@ -21,11 +21,11 @@ def make_case(case_id: str, risk_score: int, status: str = "unreviewed") -> QaCa
     )
 
 
-def test_response_replaces_legacy_llm_credential_error_with_actionable_text() -> None:
-    qa_case = make_case("LG-legacy", 88)
-    qa_case.evidence_json = {"summary": "KhÃ´ng láº¥y Ä‘Æ°á»£c giáº£i thÃ­ch tá»« LLM (lá»—i: GOOGLE_API_KEY is required)."}
+def test_response_replaces_llm_credential_error_with_actionable_text() -> None:
+    qa_case = make_case("LG-missing-llm-key", 88)
+    qa_case.evidence_json = {"summary": "KhÃ´ng láº¥y Ä‘Æ°á»£c giáº£i thÃ­ch tá»« LLM (lá»—i: OPENAI_API_KEY is required)."}
     response = QaCaseService.to_response(qa_case)
-    assert "GOOGLE_API_KEY" not in response.evidence["summary"]
+    assert "OPENAI_API_KEY" not in response.evidence["summary"]
     assert "2D Editor" in response.recommendation
 
 

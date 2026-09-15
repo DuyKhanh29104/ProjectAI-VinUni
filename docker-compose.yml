@@ -49,12 +49,10 @@ services:
       RUN_MIGRATIONS: "${RUN_MIGRATIONS:-true}"
       DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-label_guardian}:${POSTGRES_PASSWORD:-label_guardian_dev}@postgres:5432/${POSTGRES_DB:-label_guardian}"
       LABEL_GUARDIAN_DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-label_guardian}:${POSTGRES_PASSWORD:-label_guardian_dev}@postgres:5432/${POSTGRES_DB:-label_guardian}"
-      DATASET_ROOT: "${DOCKER_DATASET_ROOT:-/app/data/shared/demo-v1/yolo}"
+      DATASET_BACKEND: "database"
     depends_on:
       postgres:
         condition: service_healthy
-    volumes:
-      - ./data:/app/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]

@@ -37,7 +37,8 @@
   ],
   "allocationPolicy": {
     "serviceAccount": {
-      "email": "label-guardian-ingestion-sa@ai-lab-16-gcp-505508.iam.gserviceaccount.com"
+      "email": "label-guardian-ingestion-sa@ai-lab-16-gcp-505508.iam.gserviceaccount.com",
+      "scopes": ["https://www.googleapis.com/auth/cloud-platform"]
     },
     "instances": [
       {

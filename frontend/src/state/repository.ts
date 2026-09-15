@@ -70,6 +70,26 @@ export interface LabelGuardianRepository {
     assigneeId: string,
     userId: string,
   ): MockState;
+  requestChanges(
+    state: MockState,
+    findingId: string,
+    userId: string,
+    assigneeId: string,
+    feedback: string,
+    reasonCategory:
+      "geometry" | "class" | "missing_label" | "tracking" | "other",
+  ): MockState;
+  resubmitFinding(
+    state: MockState,
+    findingId: string,
+    userId: string,
+    note?: string,
+  ): MockState;
+  resolveFeedback(
+    state: MockState,
+    commentId: string,
+    userId: string,
+  ): MockState;
   reset(): MockState;
 }
 

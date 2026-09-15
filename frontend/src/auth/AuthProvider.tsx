@@ -9,7 +9,8 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { labelGuardianApiV1 } from "../api/labelGuardianApi";
-import type { User } from "../domain/types";
+import type { Role, User } from "../domain/types";
+import { getDemoAuthCredentials, isDemoAuthEmail } from "./demoAuth";
 import {
   authConfigurationError,
   isSupabaseAuthEnabled,
@@ -20,8 +21,10 @@ interface AuthContextValue {
   enabled: boolean;
   loading: boolean;
   user: User | null;
+  isDemoSession: boolean;
   error: string;
   signIn: (email: string, password: string) => Promise<void>;
+  signInDemo: (role: Role) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<string>;
   signOut: () => Promise<void>;
 }
@@ -41,20 +44,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const enabled = isSupabaseAuthEnabled();
   const [loading, setLoading] = useState(enabled);
   const [user, setUser] = useState<User | null>(null);
+  const [isDemoSession, setIsDemoSession] = useState(false);
   const [error, setError] = useState(authConfigurationError);
 
-  const loadProfile = useCallback(async (accessToken: string) => {
-    const profile = await labelGuardianApiV1.getMyProfile(accessToken);
-    const mapped: User = {
-      id: profile.id,
-      email: profile.email,
-      name: profile.displayName,
-      role: profile.role,
-      avatarInitials: initialsFor(profile.displayName),
-    };
-    setUser(mapped);
-    setError("");
-  }, []);
+  const loadProfile = useCallback(
+    async (
+      accessToken: string,
+      options: { demoSession?: boolean; expectedRole?: Role } = {},
+    ) => {
+      const profile = await labelGuardianApiV1.getMyProfile(accessToken);
+      if (options.expectedRole && profile.role !== options.expectedRole) {
+        throw new Error(
+          `The Supabase demo account is configured as ${profile.role}, not ${options.expectedRole}.`,
+        );
+      }
+      const mapped: User = {
+        id: profile.id,
+        email: profile.email,
+        name: profile.displayName,
+        role: profile.role,
+        avatarInitials: initialsFor(profile.displayName),
+      };
+      const demoSession = options.demoSession ?? false;
+      setIsDemoSession(demoSession);
+      setUser(mapped);
+      setError("");
+      return mapped;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!enabled || !supabase) {
@@ -66,7 +84,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       try {
         if (sessionError) throw sessionError;
-        if (data.session) await loadProfile(data.session.access_token);
+        if (data.session) {
+          await loadProfile(data.session.access_token, {
+            demoSession: isDemoAuthEmail(data.session.user.email),
+          });
+        }
       } catch (nextError) {
         if (active) {
           setUser(null);
@@ -80,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       if (!session) {
         queryClient.clear();
+        setIsDemoSession(false);
         setUser(null);
         setLoading(false);
         return;
@@ -87,7 +110,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Supabase advises deferring follow-up client work from this callback.
       window.setTimeout(() => {
         if (!active) return;
-        void loadProfile(session.access_token).catch((nextError: unknown) => {
+        void loadProfile(session.access_token, {
+          demoSession: isDemoAuthEmail(session.user.email),
+        }).catch((nextError: unknown) => {
           setUser(null);
           setError(nextError instanceof Error ? nextError.message : "Không thể tải hồ sơ người dùng.");
         });
@@ -104,16 +129,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       enabled,
       loading,
       user,
+      isDemoSession,
       error,
       signIn: async (email, password) => {
         if (!supabase) throw new Error(authConfigurationError || "Supabase Auth chưa được cấu hình.");
         setLoading(true);
         setError("");
+        setIsDemoSession(false);
         try {
           const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
           if (signInError) throw signInError;
           if (!data.session) throw new Error("Supabase không trả về phiên đăng nhập.");
-          await loadProfile(data.session.access_token);
+          await loadProfile(data.session.access_token, {
+            demoSession: isDemoAuthEmail(data.session.user.email),
+          });
+        } finally {
+          setLoading(false);
+        }
+      },
+      signInDemo: async (role) => {
+        if (!supabase) {
+          throw new Error(
+            authConfigurationError || "Supabase Auth chưa được cấu hình.",
+          );
+        }
+        const credentials = getDemoAuthCredentials(role);
+        setLoading(true);
+        setError("");
+        queryClient.clear();
+        setIsDemoSession(true);
+        setUser(null);
+        try {
+          const { data, error: signInError } =
+            await supabase.auth.signInWithPassword(credentials);
+          if (signInError) throw signInError;
+          if (!data.session) {
+            throw new Error("Supabase không trả về phiên demo.");
+          }
+          await loadProfile(data.session.access_token, {
+            demoSession: true,
+            expectedRole: role,
+          });
+        } catch (nextError) {
+          setIsDemoSession(false);
+          setUser(null);
+          const { data } = await supabase.auth.getSession();
+          if (data.session) {
+            await supabase.auth.signOut({ scope: "local" });
+          }
+          throw nextError;
         } finally {
           setLoading(false);
         }
@@ -141,10 +205,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut: async () => {
         if (supabase) await supabase.auth.signOut();
         queryClient.clear();
+        setIsDemoSession(false);
         setUser(null);
       },
     }),
-    [enabled, error, loadProfile, loading, queryClient, user],
+    [enabled, error, isDemoSession, loadProfile, loading, queryClient, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

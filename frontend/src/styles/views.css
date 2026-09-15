@@ -1,5 +1,3 @@
-
-
 /* FE-19 — annotator workspace */
 .annotator-kpi-grid,
 .reports-kpi-grid {
@@ -203,7 +201,9 @@
   height: 7px;
 }
 
-.progress-purple { background: var(--purple); }
+.progress-purple {
+  background: var(--purple);
+}
 
 .severity-report-row .progress-track {
   flex: 1;
@@ -381,7 +381,7 @@
 
 .pipeline-trigger-form input:focus,
 .pipeline-trigger-form select:focus {
-  border-color: #8b5cf6;
+  border-color: var(--color-brand);
   outline: 2px solid rgba(139, 92, 246, 0.22);
 }
 
@@ -441,7 +441,7 @@
 }
 
 .pipeline-flow-node.is-active {
-  border-color: #8b5cf6;
+  border-color: var(--color-brand);
   background: #171e31;
 }
 
@@ -495,10 +495,16 @@
   background: var(--faint);
 }
 
-.pipeline-event-dot.status-completed { background: var(--green); }
-.pipeline-event-dot.status-running { background: var(--blue); }
+.pipeline-event-dot.status-completed {
+  background: var(--green);
+}
+.pipeline-event-dot.status-running {
+  background: var(--blue);
+}
 .pipeline-event-dot.status-failed,
-.pipeline-event-dot.status-blocked_credentials { background: var(--red); }
+.pipeline-event-dot.status-blocked_credentials {
+  background: var(--red);
+}
 
 .pipeline-event-row p {
   margin: 4px 0 0;
@@ -820,8 +826,12 @@
   font-size: 9px;
 }
 
-.report-export-status-success { color: #176b54; }
-.report-export-status-exporting { color: var(--blue); }
+.report-export-status-success {
+  color: #176b54;
+}
+.report-export-status-exporting {
+  color: var(--blue);
+}
 
 /* FE-22 — dataset manifest and QA run */
 .global-safety-banner {

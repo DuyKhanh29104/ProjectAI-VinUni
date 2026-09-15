@@ -1,6 +1,5 @@
 .git
 .gitignore
-.dvc/
 .env
 .env.*
 .venv/
@@ -24,7 +23,6 @@ logs/
 .github/
 tests/
 docs/
-presentation/
 deploy/
 eval/
 *.md

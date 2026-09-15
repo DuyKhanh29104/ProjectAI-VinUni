@@ -59,13 +59,15 @@ RUN useradd -m appuser && \
     chown -R appuser:appuser /home/appuser
 
 # Copy application code
-COPY . .
+COPY --chown=appuser:appuser . .
 
-# Create data directory with correct ownership
+# Prepare the ephemeral GCS cache and normalize the startup script copied from
+# cross-platform worktrees. Production may mount a persistent cache here, but
+# the image never bundles or depends on workspace dataset files.
 RUN mkdir -p /app/data && \
     sed -i 's/\r$//' /app/scripts/start_server.sh && \
     chmod +x /app/scripts/start_server.sh && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app/data
 
 USER appuser
 

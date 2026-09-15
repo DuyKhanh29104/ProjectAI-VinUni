@@ -4,15 +4,22 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from hashlib import sha256
+from typing import Literal, cast
 from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.models.agent_schemas import LabelQAReport
 from src.models.audit_log import AuditLog
 from src.models.qa_case import QaCase
 from src.models.qa_evaluation import QaEvaluation
-from src.models.real_dataset_schemas import RealDatasetEvaluation
+from src.models.real_dataset_schemas import (
+    RealDatasetEvaluation,
+    RealDatasetImage,
+    RealDatasetMatch,
+    RealDatasetPrediction,
+)
 
 RISK_BY_SEVERITY = {"high": 90, "medium": 65, "low": 35}
 QUEUE_ERROR_TYPE = {
@@ -26,6 +33,80 @@ QUEUE_ERROR_TYPE = {
 
 
 class RealDatasetQaService:
+    async def latest_evaluation(
+        self,
+        session: AsyncSession,
+        *,
+        dataset_id: str,
+        dataset_version: str,
+        split: str,
+        image_id: str,
+        image: RealDatasetImage,
+        revision: int = 0,
+    ) -> RealDatasetEvaluation | None:
+        stored_evaluation = await session.scalar(
+            select(QaEvaluation)
+            .where(
+                QaEvaluation.dataset_id == dataset_id,
+                QaEvaluation.dataset_version == dataset_version,
+                QaEvaluation.split == split,
+                QaEvaluation.image_id == image_id,
+                QaEvaluation.annotation_revision == revision,
+            )
+            .order_by(QaEvaluation.updated_at.desc(), QaEvaluation.created_at.desc())
+            .limit(1)
+        )
+        if stored_evaluation is None:
+            return None
+
+        # Pre-migration rows default to revision zero. Their deterministic ID
+        # must agree before an old report can be associated with current labels.
+        identity = ":".join(
+            (dataset_id, dataset_version, split, image_id, stored_evaluation.model_name, f"revision:{revision}")
+        )
+        if stored_evaluation.id != f"eval-{sha256(identity.encode()).hexdigest()[:24]}":
+            return None
+
+        status = stored_evaluation.status
+        if status not in {"pass", "needs_review", "error"}:
+            status = "error"
+        case_ids = list(
+            (
+                await session.scalars(
+                    select(QaCase.id).where(QaCase.evaluation_id == stored_evaluation.id).order_by(QaCase.created_at)
+                )
+            ).all()
+        )
+        report = (
+            LabelQAReport.model_validate(stored_evaluation.report_json)
+            if stored_evaluation.report_json
+            else LabelQAReport(
+                image_path=image.image_url,
+                status=cast(Literal["pass", "needs_review", "error"], status),
+                summary="Loaded persisted YOLO evaluation from database.",
+                metrics=stored_evaluation.metrics_json or {},
+                issues=[],
+            )
+        )
+        return RealDatasetEvaluation(
+            evaluation_id=stored_evaluation.id,
+            annotation_revision=stored_evaluation.annotation_revision,
+            dataset_id=stored_evaluation.dataset_id,
+            dataset_version=stored_evaluation.dataset_version,
+            model_name=stored_evaluation.model_name,
+            image=image,
+            report=report,
+            predictions=[
+                RealDatasetPrediction.model_validate(item) for item in stored_evaluation.predictions_json or []
+            ],
+            matches=[RealDatasetMatch.model_validate(item) for item in stored_evaluation.matches_json or []],
+            unmatched_ground_truth=stored_evaluation.unmatched_ground_truth_json or [],
+            unmatched_predictions=stored_evaluation.unmatched_predictions_json or [],
+            cached=True,
+            persisted=True,
+            created_case_ids=case_ids,
+        )
+
     async def persist(
         self,
         session: AsyncSession,
@@ -39,8 +120,10 @@ class RealDatasetQaService:
             "split": evaluation.image.split,
             "image_id": evaluation.image.id,
             "model_name": evaluation.model_name,
+            "annotation_revision": evaluation.annotation_revision,
             "status": evaluation.report.status,
             "metrics_json": evaluation.report.metrics,
+            "report_json": evaluation.report.model_dump(mode="json", by_alias=True),
             "predictions_json": [item.model_dump(mode="json", by_alias=True) for item in evaluation.predictions],
             "matches_json": [item.model_dump(mode="json", by_alias=True) for item in evaluation.matches],
             "unmatched_ground_truth_json": evaluation.unmatched_ground_truth,
@@ -74,9 +157,7 @@ class RealDatasetQaService:
             }
             for prediction in evaluation.predictions
         ]
-        ground_truth_evidence = [
-            label.model_dump(mode="json", by_alias=True) for label in evaluation.image.labels
-        ]
+        ground_truth_evidence = [label.model_dump(mode="json", by_alias=True) for label in evaluation.image.labels]
         case_ids: list[str] = []
         for issue_index, issue in enumerate(evaluation.report.issues):
             prediction_index = issue.evidence.get("prediction_index")
@@ -92,11 +173,15 @@ class RealDatasetQaService:
             case_ids.append(case_id)
             stored_case = await session.get(QaCase, case_id)
             label = label_lookup.get(issue.label_id or "")
-            class_name = label.class_name if label is not None else str(
-                issue.evidence.get("class_name")
-                or issue.evidence.get("gt_class")
-                or issue.evidence.get("pred_class")
-                or "unknown"
+            class_name = (
+                label.class_name
+                if label is not None
+                else str(
+                    issue.evidence.get("class_name")
+                    or issue.evidence.get("gt_class")
+                    or issue.evidence.get("pred_class")
+                    or "unknown"
+                )
             )
             evidence = {
                 "summary": issue.explanation or evaluation.report.summary,

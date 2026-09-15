@@ -8,7 +8,6 @@ from mimetypes import guess_type
 from pathlib import Path
 from typing import Any, cast
 
-from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 from sqlalchemy import Engine, create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -23,7 +22,11 @@ def create_session_factory(database_url: str) -> sessionmaker[Session]:
 
     Database schemas are always managed by Alembic before the worker starts.
     """
-    engine: Engine = create_engine(normalize_sync_database_url(database_url), pool_pre_ping=True)
+    engine: Engine = create_engine(
+        normalize_sync_database_url(database_url),
+        pool_pre_ping=True,
+        connect_args={"prepare_threshold": None},
+    )
     return sessionmaker(bind=engine, expire_on_commit=False)
 
 
@@ -61,13 +64,8 @@ class IngestionService:
         self.upload_images = upload_images
 
     def ensure_bucket(self) -> None:
-        try:
-            self.storage_client.head_bucket(Bucket=self.settings.bucket_name)
-        except ClientError as error:
-            code = str(error.response.get("Error", {}).get("Code", ""))
-            if code not in {"404", "NoSuchBucket", "NotFound"}:
-                raise
-            self.storage_client.create_bucket(Bucket=self.settings.bucket_name)
+        if not self.storage_client.bucket_exists(self.settings.bucket_name):
+            self.storage_client.create_bucket(self.settings.bucket_name)
 
     def ingest(self) -> IngestionResult:
         """Upload images and upsert their normalized QA records."""
@@ -119,7 +117,7 @@ class IngestionService:
                 str(image_path),
                 self.settings.bucket_name,
                 object_key,
-                ExtraArgs={"ContentType": content_type},
+                content_type=content_type,
             )
             uploaded = 1
         object_url = self.settings.object_uri(object_key)

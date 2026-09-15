@@ -44,7 +44,14 @@ from src.services.ingestion.official_dataset_downloader import (
 
 
 class CloudStorageClient(Protocol):
-    def upload_file(self, filename: str, bucket: str, key: str, **kwargs: Any) -> None: ...
+    def upload_file(
+        self,
+        filename: str,
+        bucket: str,
+        key: str,
+        *,
+        content_type: str | None = None,
+    ) -> None: ...
 
     def download_file(self, bucket: str, key: str, filename: str) -> None: ...
 
@@ -64,7 +71,7 @@ class CloudIngestionRequest(BaseModel):
 
     dataset_type: Literal["kitti", "nuscenes"]
     release: str | None = None
-    split: str = "smoke"
+    split: str = "product"
     max_frames: int | None = Field(default=None, ge=1)
     source: Literal["official"] = "official"
     requested_by: str | None = None
@@ -149,12 +156,18 @@ class CloudIngestionWorker:
         self.session_factory = session_factory
         self.scratch_root = scratch_root
 
-    def run(self, request: CloudIngestionRequest, phase: Literal["stage", "normalize", "validate", "publish", "all"]) -> WorkerResult:
+    def run(
+        self, request: CloudIngestionRequest, phase: Literal["stage", "normalize", "validate", "publish", "all"]
+    ) -> WorkerResult:
         job_id = self._create_job(request) if self.session_factory else None
         try:
-            self._record_event(job_id, IngestionPhase.RESOLVE_SOURCE, IngestionJobStatus.RUNNING, "Cloud worker started.")
+            self._record_event(
+                job_id, IngestionPhase.RESOLVE_SOURCE, IngestionJobStatus.RUNNING, "Cloud worker started."
+            )
             if phase in {"stage", "all"}:
-                self._record_event(job_id, IngestionPhase.ACQUIRE_RAW, IngestionJobStatus.RUNNING, "Staging raw archives.")
+                self._record_event(
+                    job_id, IngestionPhase.ACQUIRE_RAW, IngestionJobStatus.RUNNING, "Staging raw archives."
+                )
                 self.stage_raw(request)
             payload: NormalizedPayload | None = None
             if phase in {"normalize", "all"}:
@@ -162,7 +175,9 @@ class CloudIngestionWorker:
                 payload = self.normalize_to_staging(request)
             validation: ValidationReport | None = None
             if phase in {"validate", "publish", "all"}:
-                self._record_event(job_id, IngestionPhase.FINALIZE, IngestionJobStatus.RUNNING, "Validating staging output.")
+                self._record_event(
+                    job_id, IngestionPhase.FINALIZE, IngestionJobStatus.RUNNING, "Validating staging output."
+                )
                 validation = self.validate(request)
             if phase in {"publish", "all"}:
                 if validation is None:
@@ -197,7 +212,7 @@ class CloudIngestionWorker:
                 str(scratch_archive),
                 self.settings.bucket_name,
                 raw_key,
-                ExtraArgs={"ContentType": guess_type(archive_name)[0] or "application/octet-stream"},
+                content_type=guess_type(archive_name)[0] or "application/octet-stream",
             )
             scratch_archive.unlink(missing_ok=True)
             staged.append(raw_key)
@@ -211,15 +226,23 @@ class CloudIngestionWorker:
             self._write_checkpoint(
                 request,
                 "normalize",
-                {"resumed": True, "images": len(images), "objects": len(objects), "staging_prefix": self.staging_prefix(request)},
+                {
+                    "resumed": True,
+                    "images": len(images),
+                    "objects": len(objects),
+                    "staging_prefix": self.staging_prefix(request),
+                },
             )
-            return NormalizedPayload(dataset_root=self._scratch_path(request) / "dataset", images=images, objects=objects)
+            return NormalizedPayload(
+                dataset_root=self._scratch_path(request) / "dataset", images=images, objects=objects
+            )
         dataset_root = self._materialize_raw_dataset(request)
         if request.dataset_type == "nuscenes":
             images, objects = NuScenesAdapter(
                 dataset_root,
                 request.normalized_release,
                 max_images=request.max_frames,
+                exclude_sample_tokens=self._existing_sample_tokens(request),
             ).load()
         else:
             images, objects = KittiAdapter(dataset_root, split=request.split).load()
@@ -234,7 +257,12 @@ class CloudIngestionWorker:
         self._write_checkpoint(
             request,
             "normalize",
-            {"resumed": False, "images": len(images), "objects": len(objects), "staging_prefix": self.staging_prefix(request)},
+            {
+                "resumed": False,
+                "images": len(images),
+                "objects": len(objects),
+                "staging_prefix": self.staging_prefix(request),
+            },
         )
         return payload
 
@@ -242,7 +270,10 @@ class CloudIngestionWorker:
         staging_prefix = self.staging_prefix(request)
         manifest = self._read_json(f"{staging_prefix}/manifests/ingest_manifest.json")
         images = [ImageMetadata(**row) for row in self._read_jsonl(f"{staging_prefix}/manifests/image_manifest.jsonl")]
-        objects = [QAObjectPayload.model_validate(row) for row in self._read_jsonl(f"{staging_prefix}/annotations/normalized_objects.jsonl")]
+        objects = [
+            QAObjectPayload.model_validate(row)
+            for row in self._read_jsonl(f"{staging_prefix}/annotations/normalized_objects.jsonl")
+        ]
         raw_archives = []
         errors: list[str] = []
         for archive_name, key in self.raw_archive_keys(request).items():
@@ -251,28 +282,40 @@ class CloudIngestionWorker:
             if size is None:
                 errors.append(f"Missing raw archive: {key}")
         frame_objects = self.storage_client.list_objects(self.settings.bucket_name, f"{staging_prefix}/frames/")
-        expected_frame_objects = [f"{staging_prefix}/frames/{image.storage_filename or image.filename}" for image in images]
+        expected_frame_objects = [
+            f"{staging_prefix}/frames/{image.storage_filename or image.filename}" for image in images
+        ]
         missing_objects = [key for key in expected_frame_objects if key not in set(frame_objects)]
         if missing_objects:
             errors.append(f"Missing normalized frame objects: {len(missing_objects)}")
         pointcloud_count = 0
         calibration_count = 0
         if request.includes_lidar:
-            pointcloud_count = len(self.storage_client.list_objects(self.settings.bucket_name, f"{staging_prefix}/pointclouds/"))
-            calibration_count = len(self.storage_client.list_objects(self.settings.bucket_name, f"{staging_prefix}/calibration/"))
+            pointcloud_count = len(
+                self.storage_client.list_objects(self.settings.bucket_name, f"{staging_prefix}/pointclouds/")
+            )
+            calibration_count = len(
+                self.storage_client.list_objects(self.settings.bucket_name, f"{staging_prefix}/calibration/")
+            )
         frame_groups = self._frame_groups(images)
         if request.includes_lidar:
             expected_3d_count = len(images) if request.dataset_type == "kitti" else len(frame_groups)
             if pointcloud_count != expected_3d_count:
-                errors.append(f"Expected {expected_3d_count} {request.dataset_type} point cloud object(s), got {pointcloud_count}")
+                errors.append(
+                    f"Expected {expected_3d_count} {request.dataset_type} point cloud object(s), got {pointcloud_count}"
+                )
             if calibration_count != expected_3d_count:
-                errors.append(f"Expected {expected_3d_count} {request.dataset_type} calibration object(s), got {calibration_count}")
+                errors.append(
+                    f"Expected {expected_3d_count} {request.dataset_type} calibration object(s), got {calibration_count}"
+                )
         if request.max_frames is not None and len(frame_groups) != request.max_frames:
             errors.append(f"Expected {request.max_frames} frame group(s), got {len(frame_groups)}")
         if request.dataset_type == "nuscenes":
             invalid_camera_sets = self._invalid_nuscenes_camera_sets(images)
             if invalid_camera_sets:
-                errors.append(f"nuScenes frame groups must contain exactly 6 synchronized camera views: {invalid_camera_sets}")
+                errors.append(
+                    f"nuScenes frame groups must contain exactly 6 synchronized camera views: {invalid_camera_sets}"
+                )
         if not images:
             errors.append("No normalized images were produced.")
         if not objects:
@@ -305,7 +348,9 @@ class CloudIngestionWorker:
         result_key = f"ops/ingestion-runs/{request.stable_run_id}/result.json"
         if self.storage_client.object_exists(self.settings.bucket_name, result_key):
             if self.session_factory is not None:
-                images, objects = self._load_payload_from_staging(request) if payload is None else (payload.images, payload.objects)
+                images, objects = (
+                    self._load_payload_from_staging(request) if payload is None else (payload.images, payload.objects)
+                )
                 self._persist_metadata(request, images, objects)
             self._write_checkpoint(request, "publish", {"resumed": True, "result": result_key})
             return
@@ -315,7 +360,9 @@ class CloudIngestionWorker:
         for source_key in self.storage_client.list_objects(self.settings.bucket_name, f"{staging_prefix}/"):
             destination_key = f"{canonical_prefix}/{source_key.removeprefix(staging_prefix + '/')}"
             self.storage_client.copy_object(self.settings.bucket_name, source_key, destination_key)
-        images, objects = self._load_payload_from_staging(request) if payload is None else (payload.images, payload.objects)
+        images, objects = (
+            self._load_payload_from_staging(request) if payload is None else (payload.images, payload.objects)
+        )
         self._persist_metadata(request, images, objects)
         self._write_json(
             result_key,
@@ -363,7 +410,28 @@ class CloudIngestionWorker:
         )
 
     def canonical_prefix(self, request: CloudIngestionRequest) -> str:
-        return f"datasets/official/{request.dataset_type}/{request.normalized_release}/{request.split}"
+        prefix = f"datasets/official/{request.dataset_type}/{request.normalized_release}"
+        return prefix if request.normalized_release == request.split == "product" else f"{prefix}/{request.split}"
+
+    def _existing_sample_tokens(self, request: CloudIngestionRequest) -> set[str]:
+        if self.session_factory is None:
+            return set()
+        canonical_prefix = self.canonical_prefix(request)
+        with self.session_factory() as session:
+            keys = session.scalars(
+                select(QAImage.storage_key).where(
+                    QAImage.dataset == request.dataset_type, QAImage.storage_key.like(f"{canonical_prefix}/frames/%")
+                )
+            ).all()
+        tokens = set()
+        prefix_len = len(f"{canonical_prefix}/frames/")
+        for key in keys:
+            if not key:
+                continue
+            parts = key[prefix_len:].split("/")
+            if len(parts) >= 2:
+                tokens.add(parts[1])
+        return tokens
 
     def _materialize_raw_dataset(self, request: CloudIngestionRequest) -> Path:
         root = self._scratch_path(request)
@@ -378,7 +446,9 @@ class CloudIngestionWorker:
         if request.dataset_type == "kitti" and request.max_frames is not None:
             image_key = archive_keys["data_object_image_2.zip"]
             with self.storage_client.open_reader(self.settings.bucket_name, image_key) as image_archive:
-                selected_kitti_frames = self._selected_kitti_frame_ids_from_zip(image_archive, request.max_frames)
+                selected_kitti_frames = self._selected_kitti_frame_ids_from_zip(
+                    image_archive, request.max_frames, exclude_frame_ids=self._existing_sample_tokens(request)
+                )
         for archive_name, key in archive_keys.items():
             if request.dataset_type == "nuscenes":
                 archive_path = archive_root / archive_name
@@ -388,7 +458,9 @@ class CloudIngestionWorker:
                         archive_path,
                         dataset_root,
                         request=request,
-                        selected_sensor_files=self._selected_nuscenes_sensor_files(dataset_root, request),
+                        selected_sensor_files=self._selected_nuscenes_sensor_files(
+                            dataset_root, request, exclude_sample_tokens=self._existing_sample_tokens(request)
+                        ),
                     )
                 else:
                     _safe_extract_tar(archive_path, dataset_root)
@@ -419,7 +491,9 @@ class CloudIngestionWorker:
             _safe_extract_tar(archive_path, destination)
             return
         if selected_sensor_files is None:
-            raise RuntimeError("nuScenes metadata must be extracted before blob archives for selective full-release ingest.")
+            raise RuntimeError(
+                "nuScenes metadata must be extracted before blob archives for selective full-release ingest."
+            )
         self._safe_extract_tar_subset(archive_path, destination, selected_sensor_files)
 
     @staticmethod
@@ -452,6 +526,7 @@ class CloudIngestionWorker:
         self,
         dataset_root: Path,
         request: CloudIngestionRequest,
+        exclude_sample_tokens: set[str] | None = None,
     ) -> set[str] | None:
         if request.max_frames is None:
             return None
@@ -464,17 +539,35 @@ class CloudIngestionWorker:
             return None
         samples = json.loads(sample_path.read_text(encoding="utf-8"))
         sample_data = json.loads(sample_data_path.read_text(encoding="utf-8"))
-        calibrated = {
-            row["token"]: row
-            for row in json.loads(calibrated_sensor_path.read_text(encoding="utf-8"))
-        } if calibrated_sensor_path.is_file() else {}
-        sensors = {
-            row["token"]: row
-            for row in json.loads(sensor_path.read_text(encoding="utf-8"))
-        } if sensor_path.is_file() else {}
+        calibrated = (
+            {row["token"]: row for row in json.loads(calibrated_sensor_path.read_text(encoding="utf-8"))}
+            if calibrated_sensor_path.is_file()
+            else {}
+        )
+        sensors = (
+            {row["token"]: row for row in json.loads(sensor_path.read_text(encoding="utf-8"))}
+            if sensor_path.is_file()
+            else {}
+        )
+        scene_path = metadata_root / "scene.json"
+        scenes = (
+            {row["token"]: row for row in json.loads(scene_path.read_text(encoding="utf-8"))}
+            if scene_path.is_file()
+            else {}
+        )
+        filtered_samples = [
+            row for row in samples if not exclude_sample_tokens or row["token"] not in exclude_sample_tokens
+        ]
         selected_sample_tokens = [
             row["token"]
-            for row in sorted(samples, key=lambda sample: (sample.get("timestamp", 0), sample.get("token", "")))[: request.max_frames]
+            for row in sorted(
+                filtered_samples,
+                key=lambda sample: (
+                    scenes.get(sample.get("scene_token", ""), {}).get("name", ""),
+                    sample.get("timestamp", 0),
+                    sample.get("token", ""),
+                ),
+            )[: request.max_frames]
         ]
         selected: set[str] = set()
         for row in sample_data:
@@ -497,7 +590,9 @@ class CloudIngestionWorker:
         return (
             self.storage_client.object_exists(self.settings.bucket_name, f"{prefix}/manifests/ingest_manifest.json")
             and self.storage_client.object_exists(self.settings.bucket_name, f"{prefix}/manifests/image_manifest.jsonl")
-            and self.storage_client.object_exists(self.settings.bucket_name, f"{prefix}/annotations/normalized_objects.jsonl")
+            and self.storage_client.object_exists(
+                self.settings.bucket_name, f"{prefix}/annotations/normalized_objects.jsonl"
+            )
         )
 
     @staticmethod
@@ -508,7 +603,9 @@ class CloudIngestionWorker:
             return CloudIngestionWorker._selected_kitti_frame_ids_from_zip(archive, max_frames)
 
     @staticmethod
-    def _selected_kitti_frame_ids_from_zip(image_archive: BinaryIO, max_frames: int | None) -> set[str] | None:
+    def _selected_kitti_frame_ids_from_zip(
+        image_archive: BinaryIO, max_frames: int | None, exclude_frame_ids: set[str] | None = None
+    ) -> set[str] | None:
         if max_frames is None:
             return None
         with zipfile.ZipFile(image_archive) as archive:
@@ -518,6 +615,7 @@ class CloudIngestionWorker:
                 if not member.is_dir()
                 and member.filename.startswith("training/image_2/")
                 and Path(member.filename).suffix.lower() == ".png"
+                and (not exclude_frame_ids or Path(member.filename).stem not in exclude_frame_ids)
             ]
         return set(sorted(frame_ids)[:max_frames])
 
@@ -574,7 +672,9 @@ class CloudIngestionWorker:
             return False
         return frame_ids is None or member_path.stem in frame_ids
 
-    def _upload_normalized_payload(self, request: CloudIngestionRequest, payload: NormalizedPayload, prefix: str) -> None:
+    def _upload_normalized_payload(
+        self, request: CloudIngestionRequest, payload: NormalizedPayload, prefix: str
+    ) -> None:
         for image in payload.images:
             image_path = payload.dataset_root / image.filename
             storage_filename = image.storage_filename or image.filename
@@ -583,7 +683,7 @@ class CloudIngestionWorker:
                 str(image_path),
                 self.settings.bucket_name,
                 key,
-                ExtraArgs={"ContentType": guess_type(image_path.name)[0] or "application/octet-stream"},
+                content_type=guess_type(image_path.name)[0] or "application/octet-stream",
             )
         self._write_jsonl(
             f"{prefix}/manifests/image_manifest.jsonl",
@@ -618,7 +718,9 @@ class CloudIngestionWorker:
         )
         self._write_json(f"ops/ingestion-runs/{request.stable_run_id}/request.json", request.model_dump(mode="json"))
 
-    def _upload_kitti_3d_artifacts(self, request: CloudIngestionRequest, payload: NormalizedPayload, prefix: str) -> None:
+    def _upload_kitti_3d_artifacts(
+        self, request: CloudIngestionRequest, payload: NormalizedPayload, prefix: str
+    ) -> None:
         for image in payload.images:
             frame_id = Path(image.filename).stem
             pointcloud_path = payload.dataset_root / "training" / "velodyne" / f"{frame_id}.bin"
@@ -632,16 +734,18 @@ class CloudIngestionWorker:
                 str(pointcloud_path),
                 self.settings.bucket_name,
                 f"{prefix}/pointclouds/{base_key}/LIDAR_TOP.bin",
-                ExtraArgs={"ContentType": "application/octet-stream"},
+                content_type="application/octet-stream",
             )
             self.storage_client.upload_file(
                 str(calibration_path),
                 self.settings.bucket_name,
                 f"{prefix}/calibration/{base_key}/calib.txt",
-                ExtraArgs={"ContentType": "text/plain"},
+                content_type="text/plain",
             )
 
-    def _upload_nuscenes_3d_artifacts(self, request: CloudIngestionRequest, payload: NormalizedPayload, prefix: str) -> None:
+    def _upload_nuscenes_3d_artifacts(
+        self, request: CloudIngestionRequest, payload: NormalizedPayload, prefix: str
+    ) -> None:
         metadata_root = payload.dataset_root / request.normalized_release
         sample_data_path = metadata_root / "sample_data.json"
         calibrated_sensor_path = metadata_root / "calibrated_sensor.json"
@@ -650,18 +754,21 @@ class CloudIngestionWorker:
         if not sample_data_path.is_file():
             raise RuntimeError(f"Missing nuScenes sample_data table for LiDAR upload: {sample_data_path}")
         sample_data = json.loads(sample_data_path.read_text(encoding="utf-8"))
-        calibrated = {
-            row["token"]: row
-            for row in json.loads(calibrated_sensor_path.read_text(encoding="utf-8"))
-        } if calibrated_sensor_path.is_file() else {}
-        ego_poses = {
-            row["token"]: row
-            for row in json.loads(ego_pose_path.read_text(encoding="utf-8"))
-        } if ego_pose_path.is_file() else {}
-        sensors = {
-            row["token"]: row
-            for row in json.loads(sensor_path.read_text(encoding="utf-8"))
-        } if sensor_path.is_file() else {}
+        calibrated = (
+            {row["token"]: row for row in json.loads(calibrated_sensor_path.read_text(encoding="utf-8"))}
+            if calibrated_sensor_path.is_file()
+            else {}
+        )
+        ego_poses = (
+            {row["token"]: row for row in json.loads(ego_pose_path.read_text(encoding="utf-8"))}
+            if ego_pose_path.is_file()
+            else {}
+        )
+        sensors = (
+            {row["token"]: row for row in json.loads(sensor_path.read_text(encoding="utf-8"))}
+            if sensor_path.is_file()
+            else {}
+        )
         frame_groups: dict[str, str] = {}
         for image in payload.images:
             storage_filename = image.storage_filename or image.filename
@@ -688,7 +795,7 @@ class CloudIngestionWorker:
                 str(pointcloud_path),
                 self.settings.bucket_name,
                 f"{prefix}/pointclouds/{base_key}/{channel}{suffix}",
-                ExtraArgs={"ContentType": "application/octet-stream"},
+                content_type="application/octet-stream",
             )
             self._write_json(
                 f"{prefix}/calibration/{base_key}/{channel}.json",
@@ -704,7 +811,12 @@ class CloudIngestionWorker:
         return sum(
             1
             for image in images
-            if (dataset_root / "training" / folder / f"{Path(image.filename).stem}.{'bin' if folder == 'velodyne' else 'txt'}").is_file()
+            if (
+                dataset_root
+                / "training"
+                / folder
+                / f"{Path(image.filename).stem}.{'bin' if folder == 'velodyne' else 'txt'}"
+            ).is_file()
         )
 
     def _persist_metadata(
@@ -720,8 +832,7 @@ class CloudIngestionWorker:
             objects_by_image[qa_object.source_image_id].append(qa_object)
         canonical_prefix = self.canonical_prefix(request)
         current_frame_keys = {
-            f"{canonical_prefix}/frames/{image.storage_filename or image.filename}"
-            for image in images
+            f"{canonical_prefix}/frames/{image.storage_filename or image.filename}" for image in images
         }
         with self.session_factory() as session, session.begin():
             job = self._current_job(session, request)
@@ -823,10 +934,15 @@ class CloudIngestionWorker:
                 )
             )
 
-    def _load_payload_from_staging(self, request: CloudIngestionRequest) -> tuple[list[ImageMetadata], list[QAObjectPayload]]:
+    def _load_payload_from_staging(
+        self, request: CloudIngestionRequest
+    ) -> tuple[list[ImageMetadata], list[QAObjectPayload]]:
         prefix = self.staging_prefix(request)
         images = [ImageMetadata(**row) for row in self._read_jsonl(f"{prefix}/manifests/image_manifest.jsonl")]
-        objects = [QAObjectPayload.model_validate(row) for row in self._read_jsonl(f"{prefix}/annotations/normalized_objects.jsonl")]
+        objects = [
+            QAObjectPayload.model_validate(row)
+            for row in self._read_jsonl(f"{prefix}/annotations/normalized_objects.jsonl")
+        ]
         return images, objects
 
     def _write_json(self, key: str, payload: dict[str, object]) -> None:
@@ -837,7 +953,7 @@ class CloudIngestionWorker:
             str(path),
             self.settings.bucket_name,
             key,
-            ExtraArgs={"ContentType": "application/json"},
+            content_type="application/json",
         )
 
     def _write_checkpoint(self, request: CloudIngestionRequest, phase: str, payload: dict[str, object]) -> None:
@@ -859,7 +975,7 @@ class CloudIngestionWorker:
             str(path),
             self.settings.bucket_name,
             key,
-            ExtraArgs={"ContentType": "application/jsonl"},
+            content_type="application/jsonl",
         )
 
     def _read_json(self, key: str) -> dict[str, Any]:
@@ -870,7 +986,9 @@ class CloudIngestionWorker:
     def _read_jsonl(self, key: str) -> list[dict[str, Any]]:
         path = self.scratch_root / "downloads" / key
         self.storage_client.download_file(self.settings.bucket_name, key, str(path))
-        return [cast(dict[str, Any], json.loads(line)) for line in path.read_text(encoding="utf-8").splitlines() if line]
+        return [
+            cast(dict[str, Any], json.loads(line)) for line in path.read_text(encoding="utf-8").splitlines() if line
+        ]
 
     @staticmethod
     def _frame_groups(images: list[ImageMetadata]) -> dict[str, int]:
@@ -895,11 +1013,7 @@ class CloudIngestionWorker:
                 groups[Path(storage_filename).stem].add(Path(storage_filename).stem)
                 continue
             groups["/".join(parts[:2])].add(Path(parts[2]).stem)
-        return {
-            group: sorted(channels)
-            for group, channels in sorted(groups.items())
-            if channels != expected_channels
-        }
+        return {group: sorted(channels) for group, channels in sorted(groups.items()) if channels != expected_channels}
 
     @staticmethod
     def _limit_images(
@@ -929,7 +1043,10 @@ class CloudIngestionWorker:
     @staticmethod
     def _download_url(url: str, destination: Path) -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(urllib.request.Request(url), timeout=120) as response, destination.open("wb") as out:
+        with (
+            urllib.request.urlopen(urllib.request.Request(url), timeout=120) as response,
+            destination.open("wb") as out,
+        ):
             total = int(response.headers.get("Content-Length") or 0)
             copied = 0
             while chunk := response.read(8 * 1024 * 1024):
@@ -1026,7 +1143,11 @@ class CloudIngestionWorker:
     def _fail_job(self, job_id: int | None, message: str) -> None:
         if self.session_factory is None or job_id is None:
             return
-        status = IngestionJobStatus.BLOCKED_CREDENTIALS if "Missing official source URL" in message else IngestionJobStatus.FAILED
+        status = (
+            IngestionJobStatus.BLOCKED_CREDENTIALS
+            if "Missing official source URL" in message
+            else IngestionJobStatus.FAILED
+        )
         with self.session_factory() as session, session.begin():
             job = session.get(IngestionJob, job_id)
             if job is None:

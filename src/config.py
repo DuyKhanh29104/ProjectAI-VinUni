@@ -38,43 +38,43 @@ class Settings(BaseSettings):
     auth_dev_user_name: str = "Local Administrator"
 
     # LLM
+    llm_provider: Literal["auto", "openai", "google"] = "auto"
     openai_api_key: str = ""
+    google_api_key: str = ""
     model_name: str = "gpt-4o-mini"
     llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0)
 
-    # Label QA Agent (optional runtime)
-    # ``auto`` prefers OpenAI when both provider keys are present.
-    label_qa_llm_provider: Literal["auto", "openai", "gemini"] = "auto"
-    google_api_key: SecretStr | None = None
-    google_model_name: str = "gemini-flash-latest"
-    # CPU-safe production default. Use a larger checkpoint only on a dedicated
-    # inference service with enough memory/compute.
-    yolo_model_name: str = "yolo26n.pt"
+    # Label QA Agent (optional runtime). Explanations use the configured LLM
+    # provider and API key above.
+    # yolo26x.pt is the largest/most accurate checkpoint and requires a
+    # dedicated inference service with enough memory/compute; it is not CPU-safe.
+    yolo_model_name: str = "yolo26x.pt"
+    # Production can keep QA orchestration in this API while delegating detector
+    # execution to a separate GPU service.
+    inference_mode: Literal["local", "remote"] = "local"
+    inference_service_url: str | None = None
+    inference_service_token: SecretStr | None = None
+    inference_request_timeout_seconds: float = Field(default=30.0, gt=0.0, le=300.0)
     yolo_confidence_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
     agent_evaluation_cache_entries: int = Field(default=128, ge=1, le=10_000)
 
-    # Local real-data MVP. The backend serves only files resolved below this root.
-    dataset_backend: Literal["filesystem", "database"] = "filesystem"
-    dataset_root: Path = Path("data/class.txt")
-    dataset_id: str = "local-yolo"
-    dataset_version: str = "workspace"
-    dataset_default_split: str = "val"
+    # Canonical runtime metadata lives in PostgreSQL and image bytes live in GCS.
+    # The filesystem option remains available only for explicit offline tests.
+    dataset_backend: Literal["filesystem", "database"] = "database"
+    dataset_root: Path = Path(".")
+    dataset_id: str = "nuscenes"
+    dataset_version: str = "v1.0-mini"
+    dataset_default_split: str = "product"
+
+    # Optional RT-DETR detector used by the comparison UI; disabled by default.
+    enable_rtdetr: bool = False
+    rtdetr_model_name: str = "rtdetr-x.pt"
+    rtdetr_confidence_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
 
     # Database
     database_url: str = "postgresql+asyncpg://label_guardian:label_guardian_dev@localhost:5432/label_guardian"
-
-    # Vector Store
-    chroma_persist_dir: str = "./data/chroma"
-
-    @field_validator("google_api_key", mode="before")
-    @classmethod
-    def normalize_empty_token(cls, value: object) -> object | None:
-        if isinstance(value, str):
-            normalized = value.strip()
-            if not normalized:
-                return None
-            return normalized
-        return value
+    database_pool_size: int = Field(default=5, ge=1, le=50)
+    database_max_overflow: int = Field(default=10, ge=0, le=50)
 
     @field_validator("supabase_jwt_secret", mode="before")
     @classmethod
@@ -89,6 +89,8 @@ class Settings(BaseSettings):
             raise ValueError("AUTH_ENABLED must be true in production.")
         if self.auth_enabled and not self.supabase_url:
             raise ValueError("SUPABASE_URL is required when AUTH_ENABLED is true.")
+        if self.inference_mode == "remote" and not self.inference_service_url:
+            raise ValueError("INFERENCE_SERVICE_URL is required when INFERENCE_MODE=remote.")
         if self.app_env == "production":
             if self.dataset_backend != "database":
                 raise ValueError("DATASET_BACKEND must be database in production.")
@@ -133,11 +135,7 @@ class Settings(BaseSettings):
 
     @property
     def auth_bootstrap_admin_email_values(self) -> set[str]:
-        return {
-            email.strip().lower()
-            for email in self.auth_bootstrap_admin_emails.split(",")
-            if email.strip()
-        }
+        return {email.strip().lower() for email in self.auth_bootstrap_admin_emails.split(",") if email.strip()}
 
 
 class IngestionSettings(BaseSettings):
@@ -185,6 +183,49 @@ class IngestionSettings(BaseSettings):
         if self.gcs_public_url:
             return f"{self.gcs_public_url.rstrip('/')}/{key}"
         return f"gs://{self.bucket_name}/{key}"
+
+
+class InferenceServiceSettings(BaseSettings):
+    """Configuration for the standalone detector runtime."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    inference_app_name: str = "Label Guardian Inference Service"
+    inference_app_version: str = "0.1.0"
+    inference_app_env: Literal["development", "production", "test"] = "development"
+    inference_auth_token: SecretStr | None = None
+    inference_model_name: str = "yolo26x.pt"
+    inference_model_version: str | None = None
+    inference_model_cache_dir: Path = Path("/tmp/label-guardian-models")
+    inference_confidence_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
+    inference_allowed_object_prefixes: str = "datasets/official"
+    inference_max_batch_size: int = Field(default=64, ge=1, le=256)
+
+    @field_validator("inference_auth_token", mode="before")
+    @classmethod
+    def normalize_empty_inference_auth_token(cls, value: object) -> object | None:
+        if isinstance(value, str):
+            return value.strip() or None
+        return value
+
+    @model_validator(mode="after")
+    def validate_production_token(self) -> "InferenceServiceSettings":
+        if self.inference_app_env == "production" and not self.inference_auth_token:
+            raise ValueError("INFERENCE_AUTH_TOKEN is required in production.")
+        return self
+
+    @property
+    def allowed_object_prefix_values(self) -> list[str]:
+        return [
+            prefix.strip().strip("/")
+            for prefix in self.inference_allowed_object_prefixes.split(",")
+            if prefix.strip().strip("/")
+        ]
 
 
 @lru_cache

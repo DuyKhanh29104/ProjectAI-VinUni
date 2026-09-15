@@ -15,15 +15,12 @@ source .venv/bin/activate
 
 # Install the project, optional local runtimes, and development tools.
 python -m pip install --upgrade pip
-python -m pip install -e ".[agent,ingestion]" --group dev
+python -m pip install -e ".[agent-yolo,ingestion]" --group dev
 
 # Create .env if not exists
 if [ ! -f .env ]; then
     cp .env.example .env
     echo "Created .env — please edit with your API keys"
 fi
-
-# Create data directories
-mkdir -p data/chroma
 
 echo "Setup complete! Run: uvicorn src.main:app --reload"

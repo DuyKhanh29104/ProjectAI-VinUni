@@ -36,7 +36,8 @@ _LOCAL_CASE_EXPLANATIONS = {
 def _display_explanation_and_recommendation(qa_case: QaCase) -> tuple[dict[str, Any], str]:
     evidence = deepcopy(qa_case.evidence_json or {})
     summary = evidence.get("summary")
-    if not isinstance(summary, str) or "GOOGLE_API_KEY" not in summary:
+    missing_llm_credential = isinstance(summary, str) and "OPENAI_API_KEY" in summary
+    if not missing_llm_credential:
         return evidence, qa_case.recommendation
     explanation, recommendation = _LOCAL_CASE_EXPLANATIONS.get(
         qa_case.error_type,

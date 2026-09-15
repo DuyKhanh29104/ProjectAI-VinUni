@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
+  useEvaluateRealDatasetBatchMutation,
   useEvaluateRealDatasetImageMutation,
   useRealDatasetFrameSamplesQuery,
+  useRealDatasetFrameSequencesQuery,
+  useRealDatasetImageEvaluationQuery,
 } from "../api/queries";
 import type {
   RealDatasetImageDto,
@@ -13,13 +16,17 @@ import {
   AuthenticatedImage,
   useAuthenticatedAssetUrl,
 } from "../components/AuthenticatedImage";
+import { labelGuardianApiV1 } from "../api/labelGuardianApi";
 import { Badge, Button, Card, SectionHeading } from "../components/ui";
 import {
   apiBoxIntersectsImage,
   reportForSelectedImage,
 } from "../utils/realDataset";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
+const highPriorityImageProps = { fetchpriority: "high" } as const;
+const EMPTY_SEQUENCES: string[] = [];
+const REAL_DATA_DATASET_OPTIONS = ["nuscenes", "kitti"] as const;
 const boxColors = [
   "#2563eb",
   "#dc2626",
@@ -38,15 +45,43 @@ function colorForLabel(label: string): string {
   return boxColors[index];
 }
 
+// Tô nổi bật toạ độ ("x 809–964, y 182–328 (theo pixel)") và độ tin cậy ("58%")
+// trong text giải thích / đề xuất của agent.
+const AGENT_HIGHLIGHT_PATTERN =
+  /(\d+(?:[.,]\d+)?\s?%|x:?\s?\d+\s?[–-]\s?\d+,\s?y:?\s?\d+\s?[–-]\s?\d+(?:\s?\(theo pixel\))?)/g;
+
+function highlightAgentText(text: string): ReactNode[] {
+  return text.split(AGENT_HIGHLIGHT_PATTERN).map((part, index) => {
+    if (index % 2 === 0) return part;
+    const isConfidence = /%\s*$/.test(part);
+    return (
+      <span
+        key={index}
+        className={`agent-hl ${isConfidence ? "agent-hl-conf" : "agent-hl-coord"}`}
+      >
+        {part.trim()}
+      </span>
+    );
+  });
+}
+
+// Nhãn có class không tồn tại bên YOLO/COCO -> không hiển thị trên UI.
+function isDisplayableLabel(label: RealDatasetLabelDto): boolean {
+  return Boolean(label.className);
+}
+
 function displayedLabelCount(image: RealDatasetImageDto): number {
-  return image.labels.filter((label) =>
-    apiBoxIntersectsImage(label.bbox, image.width, image.height),
+  return image.labels.filter(
+    (label) =>
+      isDisplayableLabel(label) &&
+      apiBoxIntersectsImage(label.bbox, image.width, image.height),
   ).length;
 }
 
 function AnnotationBox({ label }: { label: RealDatasetLabelDto }) {
   const { x1, y1, x2, y2 } = label.bbox;
-  const color = colorForLabel(label.className);
+  const shownClass = label.normalizedClassName ?? label.className;
+  const color = colorForLabel(shownClass);
   return (
     <g>
       <rect
@@ -61,7 +96,7 @@ function AnnotationBox({ label }: { label: RealDatasetLabelDto }) {
       <rect
         x={x1}
         y={Math.max(0, y1 - 22)}
-        width={Math.max(64, label.className.length * 9)}
+        width={Math.max(64, shownClass.length * 9)}
         height="22"
         fill={color}
       />
@@ -72,7 +107,7 @@ function AnnotationBox({ label }: { label: RealDatasetLabelDto }) {
         fontSize="14"
         fontWeight="700"
       >
-        {label.className}
+        {shownClass}
       </text>
     </g>
   );
@@ -84,6 +119,7 @@ function PredictionBox({
   prediction: RealDatasetPredictionDto;
 }) {
   const { x1, y1, x2, y2 } = prediction.bbox;
+  const shownClass = prediction.normalizedClassName ?? prediction.className;
   return (
     <g>
       <rect
@@ -99,7 +135,7 @@ function PredictionBox({
       <rect
         x={x1}
         y={Math.max(0, y1 - 22)}
-        width={Math.max(90, prediction.className.length * 9)}
+        width={Math.max(90, shownClass.length * 9)}
         height="22"
         fill="#f59e0b"
       />
@@ -110,28 +146,53 @@ function PredictionBox({
         fontSize="14"
         fontWeight="700"
       >
-        {prediction.className} · {Math.round(prediction.confidence * 100)}%
+        {shownClass} · {Math.round(prediction.confidence * 100)}%
       </text>
     </g>
   );
 }
 
 export function RealDataQAView() {
+  const lang = (localStorage.getItem("label-guardian-lang") as "en" | "vi") || "en";
+  const t = (en: string, vi: string) => (lang === "en" ? en : vi);
+
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedDataset = searchParams.get("dataset") || "nuscenes";
-  const requestedSplit = searchParams.get("split") || undefined;
+  const requestedSplit = searchParams.get("split") || import.meta.env.VITE_DATASET_DEFAULT_SPLIT || "product";
+  const [selectedSequence, setSelectedSequence] = useState<string>("all");
   const [offset, setOffset] = useState(0);
   const [selectedId, setSelectedId] = useState<string>();
   const [comparisonMode, setComparisonMode] = useState<
     "gt" | "prediction" | "both"
   >("both");
+
+  const sequencesQuery = useRealDatasetFrameSequencesQuery(
+    requestedSplit,
+    selectedDataset,
+  );
+  const availableSequences = sequencesQuery.data ?? EMPTY_SEQUENCES;
+
+  useEffect(() => {
+    if (
+      selectedSequence !== "all" &&
+      !availableSequences.includes(selectedSequence)
+    ) {
+      setSelectedSequence("all");
+      setOffset(0);
+    }
+  }, [availableSequences, selectedSequence]);
+
+  // Paginated query for the active list (loads only PAGE_SIZE = 10 samples)
   const samplesQuery = useRealDatasetFrameSamplesQuery(
     requestedSplit,
     offset,
     selectedDataset,
+    selectedSequence === "all" ? undefined : selectedSequence,
+    PAGE_SIZE,
   );
   const split = requestedSplit ?? samplesQuery.data?.split ?? "";
   const evaluation = useEvaluateRealDatasetImageMutation();
+  const batchEvaluation = useEvaluateRealDatasetBatchMutation();
   const samples = samplesQuery.data?.results ?? [];
   const images = useMemo(
     () => samples.flatMap((sample) => sample.cameras),
@@ -144,9 +205,33 @@ export function RealDataQAView() {
     }
   }, [images, selectedId]);
 
+  useEffect(() => {
+    if (document.hidden || !selectedId) return;
+    const index = images.findIndex((img) => img.id === selectedId);
+    if (index === -1) return;
+
+    const connection = navigator.connection;
+    if (connection && (connection.saveData || connection.effectiveType === "slow-2g" || connection.effectiveType === "2g")) {
+      return;
+    }
+
+    const prefetchImage = (img?: RealDatasetImageDto) => {
+      if (!img) return;
+      labelGuardianApiV1.fetchAsset(img.imageUrl).catch(() => {});
+    };
+
+    prefetchImage(images[index + 1]);
+    prefetchImage(images[index - 1]);
+  }, [selectedId, images]);
+
   const selected = useMemo(
     () => images.find((image) => image.id === selectedId) ?? images[0],
     [images, selectedId],
+  );
+  const persistedEvaluationQuery = useRealDatasetImageEvaluationQuery(
+    split,
+    selected?.id,
+    Boolean(selected),
   );
   const selectedAsset = useAuthenticatedAssetUrl(selected?.imageUrl);
   const selectedSample = useMemo(
@@ -158,16 +243,24 @@ export function RealDataQAView() {
   );
   const displayedLabels = useMemo(
     () =>
-      selected?.labels.filter((label) =>
-        apiBoxIntersectsImage(label.bbox, selected.width, selected.height),
+      selected?.labels.filter(
+        (label) =>
+          isDisplayableLabel(label) &&
+          apiBoxIntersectsImage(label.bbox, selected.width, selected.height),
       ) ?? [],
     [selected],
   );
-  const report = reportForSelectedImage(evaluation.data, selected?.id);
+  const selectedEvaluation = persistedEvaluationQuery.data ?? undefined;
+  const selectedPredictions = selectedEvaluation?.predictions ?? [];
+  const report = reportForSelectedImage(selectedEvaluation, selected?.id);
   const lastPage = samplesQuery.data ? offset + PAGE_SIZE >= samplesQuery.data.count : true;
-  const datasetOptions = samplesQuery.data?.availableDatasets.length
-    ? samplesQuery.data.availableDatasets
-    : ["nuscenes", "kitti"];
+  const datasetOptions = useMemo(() => {
+    const options = new Set<string>(REAL_DATA_DATASET_OPTIONS);
+    samplesQuery.data?.availableDatasets.forEach((item) => options.add(item));
+    return Array.from(options);
+  }, [samplesQuery.data?.availableDatasets]);
+  const isEvaluating = evaluation.isPending || batchEvaluation.isPending;
+
 
   const updateUrlFilter = (key: "dataset" | "split", value: string) => {
     const next = new URLSearchParams(searchParams);
@@ -178,15 +271,15 @@ export function RealDataQAView() {
   if (samplesQuery.isPending) {
     return (
       <Card className="real-data-state">
-        <strong>Đang đọc dataset thật…</strong>
-        <p>Backend đang nạp metadata và YOLO labels.</p>
+        <strong>{t("Loading dataset...", "Đang nạp dataset...")}</strong>
+        <p>{t("Fetching dataset metadata and annotations from database.", "Đang nạp dữ liệu metadata và nhãn đối tượng.")}</p>
       </Card>
     );
   }
   if (samplesQuery.isError) {
     return (
       <Card className="real-data-state is-error">
-        <strong>Không tải được dataset thật</strong>
+        <strong>{t("Failed to load dataset", "Không thể tải tập dữ liệu")}</strong>
         <p>{samplesQuery.error.message}</p>
         <code>
           DATASET_BACKEND=database · split={requestedSplit ?? "backend default"}
@@ -199,9 +292,9 @@ export function RealDataQAView() {
     <div className="real-data-page">
       <div className="real-data-heading">
         <SectionHeading
-          eyebrow="Bước 1 · Dataset thật + Agent"
-          title="Chọn frame và tạo QA Case"
-          description="Ảnh và nhãn được đọc từ Supabase metadata, còn frame được stream từ GCS private qua backend."
+          eyebrow={t("QA Triage", "Phân loại QA")}
+          title={t("Triage Frame & Generate QA Cases", "Triage Frame và tạo QA Case")}
+          description={t("Access and triage sensor frames to execute validation runs and log QA findings.", "Truy xuất và triage các sensor frame để thực thi tiến trình đánh giá và ghi nhận lỗi QA.")}
         />
         <div className="real-data-controls">
           <label>
@@ -212,6 +305,7 @@ export function RealDataQAView() {
                 updateUrlFilter("dataset", event.target.value);
                 setOffset(0);
                 setSelectedId(undefined);
+                setSelectedSequence("all");
                 evaluation.reset();
               }}
             >
@@ -226,11 +320,29 @@ export function RealDataQAView() {
                 updateUrlFilter("split", event.target.value);
                 setOffset(0);
                 setSelectedId(undefined);
+                setSelectedSequence("all");
                 evaluation.reset();
               }}
             >
               {samplesQuery.data?.availableSplits.map((item) => (
                 <option key={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Scene (Sequence)</span>
+            <select
+              value={selectedSequence}
+              onChange={(event) => {
+                setSelectedSequence(event.target.value);
+                setOffset(0);
+                setSelectedId(undefined);
+                evaluation.reset();
+              }}
+            >
+              <option value="all">Tất cả sequence</option>
+              {availableSequences.map((seq) => (
+                <option key={seq} value={seq}>{seq}</option>
               ))}
             </select>
           </label>
@@ -240,7 +352,9 @@ export function RealDataQAView() {
           <Badge tone="neutral">
             {samplesQuery.data?.imageCount.toLocaleString()} camera views
           </Badge>
-          <Badge tone="neutral">{samplesQuery.data?.classes.length} lớp</Badge>
+          <Badge tone="neutral">
+            {(samplesQuery.data?.normalizedClasses ?? samplesQuery.data?.classes)?.length} lớp
+          </Badge>
         </div>
       </div>
 
@@ -297,9 +411,11 @@ export function RealDataQAView() {
                       }}
                     >
                       <AuthenticatedImage
-                        sourcePath={image.imageUrl}
+                        sourcePath={`${image.imageUrl}?size=thumbnail`}
                         alt={`${sample.sampleId} ${image.cameraChannel ?? image.id}`}
                         loading="lazy"
+                        // @ts-ignore
+                        fetchpriority="low"
                       />
                       <span>
                         <strong>
@@ -323,7 +439,7 @@ export function RealDataQAView() {
             >
               Trang trước
             </Button>
-            <span>{Math.floor(offset / PAGE_SIZE) + 1}</span>
+            <span>{Math.floor(offset / PAGE_SIZE) + 1} / {Math.ceil((samplesQuery.data?.count ?? 0) / PAGE_SIZE) || 1}</span>
             <Button
               size="sm"
               disabled={lastPage}
@@ -379,7 +495,7 @@ export function RealDataQAView() {
                       GT · {displayedLabels.length}/{selected.labelCount}
                     </Badge>
                     <Badge tone="info">
-                      YOLO · {evaluation.data?.predictions.length ?? 0}
+                      YOLO · {selectedPredictions.length}
                     </Badge>
                     <span>
                       {selected.width} × {selected.height}
@@ -395,6 +511,7 @@ export function RealDataQAView() {
                     href={selectedAsset.source}
                     width={selected.width}
                     height={selected.height}
+                    {...highPriorityImageProps}
                   />
                   {comparisonMode !== "prediction"
                     ? displayedLabels.map((label) => (
@@ -402,7 +519,7 @@ export function RealDataQAView() {
                       ))
                     : null}
                   {comparisonMode !== "gt"
-                    ? evaluation.data?.predictions.map((prediction) => (
+                    ? selectedPredictions.map((prediction) => (
                         <PredictionBox
                           key={prediction.id}
                           prediction={prediction}
@@ -432,38 +549,74 @@ export function RealDataQAView() {
                 <span className="eyebrow">LangGraph + YOLO</span>
                 <h2>Label QA Agent</h2>
               </div>
-              <Button
-                variant="primary"
-                disabled={!selected || evaluation.isPending}
-                onClick={() =>
-                  selected &&
-                  evaluation.mutate({
-                    split,
-                    imageId: selected.id,
-                    persist: true,
-                  })
-                }
-              >
-                {evaluation.isPending
-                  ? "Đang chạy inference…"
-                  : "Chạy Agent & tạo QA Cases"}
-              </Button>
+              <div className="real-data-agent-actions">
+                <Button
+                  variant="secondary"
+                  disabled={images.length === 0 || isEvaluating}
+                  onClick={() =>
+                    batchEvaluation.mutate({
+                      split,
+                      imageIds: images.map((image) => image.id),
+                      persist: true,
+                    })
+                  }
+                >
+                  {batchEvaluation.isPending
+                    ? t("Running page...", "Đang chạy cả trang...")
+                    : t("Run Current Page", "Chạy cả trang")}
+                </Button>
+                <Button
+                  variant="primary"
+                  disabled={!selected || isEvaluating}
+                  onClick={() =>
+                    selected &&
+                    evaluation.mutate({
+                      split,
+                      imageId: selected.id,
+                      persist: true,
+                    })
+                  }
+                >
+                  {evaluation.isPending
+                    ? t("Running verification...", "Đang chạy kiểm tra...")
+                    : t("Run Agent & Generate QA Cases", "Chạy Agent & tạo QA Cases")}
+                </Button>
+              </div>
             </div>
             {evaluation.isError ? (
               <div className="real-data-agent-error">
-                <strong>Agent request thất bại</strong>
+                <strong>{t("Verification request failed", "Yêu cầu kiểm tra thất bại")}</strong>
                 <p>{evaluation.error.message}</p>
+              </div>
+            ) : null}
+            {batchEvaluation.isError ? (
+              <div className="real-data-agent-error">
+                <strong>{t("Batch verification failed", "Chạy batch thất bại")}</strong>
+                <p>{batchEvaluation.error.message}</p>
+              </div>
+            ) : null}
+            {batchEvaluation.data ? (
+              <div className="real-data-agent-empty">
+                <p>
+                  {t(
+                    `Batch completed: ${batchEvaluation.data.succeeded}/${batchEvaluation.data.count} images.`,
+                    `Batch hoàn tất: ${batchEvaluation.data.succeeded}/${batchEvaluation.data.count} ảnh.`,
+                  )}
+                </p>
+                <small>
+                  {batchEvaluation.data.inferenceBatchUsed
+                    ? t("Remote inference batch endpoint was used.", "Đã dùng endpoint batch của Inference Service.")
+                    : t("Fallback evaluation path was used.", "Đã dùng đường chạy fallback.")}
+                </small>
               </div>
             ) : null}
             {!report && !evaluation.isPending ? (
               <div className="real-data-agent-empty">
                 <p>
-                  Chạy Agent để so sánh ground truth thật với prediction YOLO
-                  trên frame đang chọn.
+                  {t("Execute the validation agent on the selected frame to detect annotations defects.", "Chạy bộ máy kiểm tra trên frame đang chọn để phát hiện các khuyết tật nhãn.")}
                 </p>
                 <small>
-                  Lần đầu có thể chậm do tải model. Cần cài extra agent-yolo từ
-                  pyproject.toml.
+                  {t("Running deep validation using active perception models and consistency rule sets.", "Chạy kiểm thử chuyên sâu bằng mô hình nhận diện và bộ quy tắc kiểm tra nhất quán.")}
                 </small>
               </div>
             ) : null}
@@ -481,14 +634,14 @@ export function RealDataQAView() {
                   >
                     {report.status}
                   </Badge>
-                  {evaluation.data?.cached ? (
+                  {selectedEvaluation?.cached ? (
                     <span>Cached</span>
                   ) : (
                     <span>Fresh inference</span>
                   )}
-                  {evaluation.data?.persisted ? (
+                  {selectedEvaluation?.persisted ? (
                     <span>
-                      Đã lưu · {evaluation.data.createdCaseIds.length} QA cases
+                      {t("Persisted", "Đã lưu")} · {selectedEvaluation.createdCaseIds.length} QA cases
                     </span>
                   ) : null}
                 </div>
@@ -508,9 +661,12 @@ export function RealDataQAView() {
                         <Badge tone={issue.severity}>{issue.severity}</Badge>
                         <strong>{issue.issueType.replaceAll("_", " ")}</strong>
                       </div>
-                      <p>{issue.explanation}</p>
+                      <p>{highlightAgentText(issue.explanation)}</p>
                       {issue.suggestedFix ? (
-                        <small>Đề xuất: {issue.suggestedFix}</small>
+                        <small className="agent-suggestion">
+                          <b>{t("Suggested fix", "Đề xuất")}:</b>{" "}
+                          {highlightAgentText(issue.suggestedFix)}
+                        </small>
                       ) : null}
                     </article>
                   ))}

@@ -61,6 +61,11 @@ export interface RealDatasetBBoxDto {
 export interface RealDatasetLabelDto {
   id: string;
   className: string;
+  /**
+   * Tên class theo taxonomy YOLO/COCO để hiển thị. `null` khi class này YOLO không có
+   * (UI ẩn nhãn đó). `className` vẫn là taxonomy gốc dùng cho annotation editor.
+   */
+  normalizedClassName?: string | null;
   bbox: RealDatasetBBoxDto;
   trackId?: string | null;
   attributes?: Record<string, boolean | number | string>;
@@ -92,6 +97,7 @@ export interface RealDatasetImageListDto {
   availableSplits: string[];
   availableDatasets: string[];
   classes: string[];
+  normalizedClasses?: string[];
 }
 
 export interface RealDatasetFrameSampleDto {
@@ -116,11 +122,13 @@ export interface RealDatasetFrameSampleListDto {
   availableSplits: string[];
   availableDatasets: string[];
   classes: string[];
+  normalizedClasses?: string[];
 }
 
 export interface RealDatasetPredictionDto {
   id: string;
   className: string;
+  normalizedClassName?: string | null;
   bbox: RealDatasetBBoxDto;
   confidence: number;
 }
@@ -153,6 +161,7 @@ export interface QaAgentReportDto {
 
 export interface RealDatasetEvaluationDto {
   evaluationId: string;
+  annotationRevision?: number;
   datasetId: string;
   datasetVersion: string;
   modelName: string;
@@ -166,6 +175,20 @@ export interface RealDatasetEvaluationDto {
   persisted: boolean;
   createdCaseIds: string[];
   inferenceMode: "yolo";
+}
+
+export interface RealDatasetBatchEvaluationResultDto {
+  imageId: string;
+  evaluation: RealDatasetEvaluationDto | null;
+  error: string | null;
+}
+
+export interface RealDatasetBatchEvaluationDto {
+  count: number;
+  succeeded: number;
+  failed: number;
+  inferenceBatchUsed: boolean;
+  results: RealDatasetBatchEvaluationResultDto[];
 }
 
 export interface AnnotationDocumentDto {

@@ -1,6 +1,6 @@
 SUPABASE_COMPOSE = docker compose -f docker-compose.yml -f docker-compose.supabase.yml
 
-.PHONY: install install-agent install-ingestion install-dev run dev-db migrate migration-current supabase-config supabase-migrate supabase-current supabase-up supabase-stop ingest-local test-db test test-agent test-data lint format typecheck openapi-check migration-check dvc-check check clean
+.PHONY: install install-agent install-ingestion install-dev run dev-db migrate migration-current supabase-config supabase-migrate supabase-current supabase-up supabase-stop ingest-local test-db test test-agent test-data lint format typecheck openapi-check migration-check check clean
 
 install:
 	python -m pip install -e .
@@ -13,7 +13,7 @@ install-ingestion:
 
 install-dev:
 	python -m pip install --upgrade pip
-	python -m pip install -e ".[agent,ingestion]" --group dev
+	python -m pip install -e ".[agent-yolo,ingestion]" --group dev
 
 run:
 	uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
@@ -71,9 +71,6 @@ openapi-check:
 
 migration-check:
 	python scripts/check_migrations.py
-
-dvc-check:
-	python -m dvc doctor
 
 check: lint typecheck openapi-check migration-check test
 

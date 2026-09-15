@@ -8,7 +8,7 @@ export function viewFromPath(pathname: string): PrimaryViewId {
 }
 
 export function pathForView(view: PrimaryViewId): string {
-  return appRoutes.find((item) => item.id === view)?.path ?? "/";
+  return appRoutes.find((item) => item.id === view)?.path ?? "/overview";
 }
 
 /**

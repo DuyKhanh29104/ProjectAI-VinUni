@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
-import { useQaCasesQuery, useQaCaseStatusMutation } from "../../api/queries";
+import {
+  useQaCasesQuery,
+  useQaCaseStatusMutation,
+  useRealDatasetFrameSamplesQuery,
+} from "../../api/queries";
+import { AuthenticatedImage } from "../../components/AuthenticatedImage";
 import type { QaCaseDto } from "../../api/types";
 import { Badge, Button, Card, StatusBadge } from "../../components/ui";
 import type { FindingType, ReviewStatus, Severity } from "../../domain/types";
@@ -71,11 +76,17 @@ export function ApiQAQueueView({
 }) {
   const [searchParameters, setSearchParameters] = useSearchParams();
   const auth = useAuth();
-  const canReview = auth.user?.role === "reviewer" || auth.user?.role === "admin";
-  const scopedSplit = searchParameters.get("split") ?? undefined;
+  const canReview =
+    auth.user?.role === "reviewer" || auth.user?.role === "admin";
+  const scopedDataset = searchParameters.get("dataset") ?? "nuscenes";
+  const scopedSplit =
+    searchParameters.get("split") ??
+    import.meta.env.VITE_DATASET_DEFAULT_SPLIT ??
+    "product";
   const scopedImageId = searchParameters.get("imageId") ?? undefined;
   const casesQuery = useQaCasesQuery({
     split: scopedSplit,
+    datasetId: scopedDataset,
     sourceImageId: scopedImageId,
   });
   const rawCases = casesQuery.data?.results ?? EMPTY_CASES;
@@ -95,6 +106,45 @@ export function ApiQAQueueView({
   const [sortBy, setSortBy] = useState<ApiQueueSortKey>("priority");
   const [selectedCaseId, setSelectedCaseId] = useState("");
   const [page, setPage] = useState(1);
+  const [activeTab, setActiveTab] = useState<"cases" | "frames">("cases");
+  const [selectedSequence, setSelectedSequence] = useState<string>("all");
+  const [selectedFrameId, setSelectedFrameId] = useState<string>("");
+
+  const allSamplesQuery = useRealDatasetFrameSamplesQuery(
+    scopedSplit,
+    0,
+    scopedDataset,
+  );
+  const allSamples = allSamplesQuery.data?.results ?? [];
+
+  const explorerSequences = useMemo(() => {
+    return [...new Set(allSamples.map((sample) => sample.sequenceId))].sort();
+  }, [allSamples]);
+
+  const filteredExplorerSamples = useMemo(() => {
+    if (selectedSequence === "all") return allSamples;
+    return allSamples.filter(
+      (sample) => sample.sequenceId === selectedSequence,
+    );
+  }, [allSamples, selectedSequence]);
+
+  useEffect(() => {
+    if (filteredExplorerSamples.length > 0) {
+      const exists = filteredExplorerSamples.some(
+        (s) => s.id === selectedFrameId,
+      );
+      if (!exists && filteredExplorerSamples[0]) {
+        setSelectedFrameId(filteredExplorerSamples[0].id);
+      }
+    } else {
+      setSelectedFrameId("");
+    }
+  }, [filteredExplorerSamples, selectedFrameId]);
+
+  const activeSample = useMemo(() => {
+    return filteredExplorerSamples.find((s) => s.id === selectedFrameId);
+  }, [filteredExplorerSamples, selectedFrameId]);
+
   const [decisionMessage, setDecisionMessage] = useState("");
 
   const sequenceOptions = useMemo(
@@ -105,15 +155,6 @@ export function ApiQAQueueView({
     () => [...new Set(cases.map((qaCase) => qaCase.className))].sort(),
     [cases],
   );
-  const datasetVersions = useMemo(
-    () => [
-      ...new Set(
-        cases.map((qaCase) => `${qaCase.datasetId} · ${qaCase.datasetVersion}`),
-      ),
-    ],
-    [cases],
-  );
-
   const visibleCases = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     const normalizedFrame = frameFilter.trim();
@@ -330,7 +371,10 @@ export function ApiQAQueueView({
               Xem toàn bộ QA Cases
             </Button>
           ) : (
-            <Button variant="secondary" onClick={() => void casesQuery.refetch()}>
+            <Button
+              variant="secondary"
+              onClick={() => void casesQuery.refetch()}
+            >
               Tải lại
             </Button>
           )
@@ -359,16 +403,40 @@ export function ApiQAQueueView({
               {scopedSplit ?? "dataset"} · {scopedImageId}
             </span>
           </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={clearImageScope}
-          >
+          <Button size="sm" variant="secondary" onClick={clearImageScope}>
             Xem toàn bộ QA cases
           </Button>
         </div>
       ) : null}
       <div className="queue-console-topline">
+        <div className="queue-dataset-selector">
+          <select
+            value={scopedDataset}
+            onChange={(event) =>
+              setSearchParameters({
+                dataset: event.target.value,
+                split: "product",
+              })
+            }
+            aria-label="Chọn dataset"
+          >
+            <option value="nuscenes">nuScenes</option>
+            <option value="kitti">KITTI</option>
+          </select>
+          <select
+            value={scopedSplit}
+            onChange={(event) =>
+              setSearchParameters({
+                dataset: scopedDataset,
+                split: event.target.value,
+              })
+            }
+            aria-label="Chọn split"
+          >
+            <option value="product">product (Official)</option>
+            <option value="smoke">smoke (Testing)</option>
+          </select>
+        </div>
         <label className="queue-global-search">
           <span aria-hidden="true">⌕</span>
           <input
@@ -379,14 +447,6 @@ export function ApiQAQueueView({
           />
           <kbd>/</kbd>
         </label>
-        <div className="queue-context-chips">
-          <Badge tone="success">FastAPI · Built-in Editor</Badge>
-          <Badge tone="info">{datasetVersions[0] ?? "dataset"}</Badge>
-          <Badge tone="neutral">QA Reviewer</Badge>
-          <span className="agent-safety-chip">
-            △ Agent chỉ đề xuất, không tự động sửa nhãn
-          </span>
-        </div>
       </div>
 
       {error ? (
@@ -440,415 +500,575 @@ export function ApiQAQueueView({
         />
       </section>
 
-      <section className="queue-console-workbench">
-        <Card className="queue-console-filter-panel">
-          <div className="queue-panel-heading">
-            <strong>Bộ lọc</strong>
-            <button type="button" onClick={clearFilters}>
-              ↻ Đặt lại
-            </button>
-          </div>
-          <div className="queue-filter-stack">
-            <label>
-              <span>Dataset</span>
-              <select value="active" disabled>
-                <option value="active">
-                  {datasetVersions[0] ?? "Đang tải"}
-                </option>
-              </select>
-            </label>
-            <label>
-              <span>Sequence</span>
-              <select
-                value={sequenceFilter}
-                onChange={(event) => setSequenceFilter(event.target.value)}
-              >
-                <option value="all">Tất cả sequence</option>
-                {sequenceOptions.map((sequence) => (
-                  <option key={sequence} value={sequence}>
-                    {sequence}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Frame</span>
-              <input
-                value={frameFilter}
-                onChange={(event) => setFrameFilter(event.target.value)}
-                placeholder="Nhập frame ID"
-              />
-            </label>
-            <label>
-              <span>Class</span>
-              <select
-                value={classFilter}
-                onChange={(event) => setClassFilter(event.target.value)}
-              >
-                <option value="all">Tất cả</option>
-                {classOptions.map((label) => (
-                  <option key={label} value={label}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Loại lỗi</span>
-              <select
-                value={typeFilter}
-                onChange={(event) =>
-                  setTypeFilter(event.target.value as FindingType | "all")
-                }
-              >
-                <option value="all">Tất cả</option>
-                {Object.entries(findingTypeLabels).map(([type, label]) => (
-                  <option key={type} value={type}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Trạng thái review</span>
-              <select
-                value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value as ReviewStatus | "all")
-                }
-              >
-                <option value="all">Tất cả</option>
-                {reviewStatuses.map((status) => (
-                  <option key={status} value={status}>
-                    {statusLabels[status]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="queue-risk-filter">
-              <span>
-                Risk score <strong>{minimumRisk}</strong>
-              </span>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={minimumRisk}
-                onChange={(event) => setMinimumRisk(Number(event.target.value))}
-              />
-            </label>
-            <label>
-              <span>Sắp xếp theo</span>
-              <select
-                value={sortBy}
-                onChange={(event) =>
-                  setSortBy(event.target.value as ApiQueueSortKey)
-                }
-              >
-                <option value="priority">Ưu tiên cao → thấp</option>
-                <option value="risk">Risk giảm dần</option>
-                <option value="newest">Mới nhất</option>
-              </select>
-            </label>
-          </div>
-        </Card>
+      <div className="queue-tabs-navigation">
+        <button
+          className={`queue-tab-button ${activeTab === "cases" ? "is-active" : ""}`}
+          onClick={() => setActiveTab("cases")}
+          type="button"
+        >
+          QA Cases Queue
+        </button>
+        <button
+          className={`queue-tab-button ${activeTab === "frames" ? "is-active" : ""}`}
+          onClick={() => setActiveTab("frames")}
+          type="button"
+        >
+          All Dataset Frames
+        </button>
+      </div>
 
-        <Card className="queue-console-viewer-card">
-          <ApiQueueComparisonViewer qaCase={selectedCase} />
-        </Card>
-
-        <Card className="queue-console-detail-panel">
-          {selectedCase ? (
-            <>
-              <div className="queue-panel-heading queue-detail-heading">
-                <div>
-                  <strong>Chi tiết case</strong>
-                  <small>{selectedCase.id}</small>
-                </div>
-                <Badge tone="info">API</Badge>
-              </div>
-              <dl className="queue-case-metadata">
-                <div>
-                  <dt>Nguồn</dt>
-                  <dd>Dataset · {selectedCase.sourceSplit}</dd>
-                </div>
-                <div>
-                  <dt>Image ID</dt>
-                  <dd>{selectedCase.sourceImageId ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt>Sequence</dt>
-                  <dd>{selectedCase.sequenceId}</dd>
-                </div>
-                <div>
-                  <dt>Frame</dt>
-                  <dd>
-                    {selectedCase.frameIndex} · {selectedCase.frameFileName}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Class</dt>
-                  <dd>{selectedCase.className}</dd>
-                </div>
-                <div>
-                  <dt>Error type</dt>
-                  <dd>
-                    <Badge tone={selectedCase.priority}>
-                      {findingTypeLabels[selectedCase.errorType]}
-                    </Badge>
-                  </dd>
-                </div>
-                <div>
-                  <dt>Risk score</dt>
-                  <dd>
-                    <Badge tone={selectedCase.priority}>
-                      {selectedCase.riskScore} / 100
-                    </Badge>
-                  </dd>
-                </div>
-                <div>
-                  <dt>Trạng thái</dt>
-                  <dd>
-                    <StatusBadge status={selectedCase.status} />
-                  </dd>
-                </div>
-                <div>
-                  <dt>Editor</dt>
-                  <dd>
-                    Revision{" "}
-                    {String(selectedCase.evidence.annotationRevision ?? 0)}
-                  </dd>
-                </div>
-              </dl>
-
-              <div className="queue-detail-section">
-                <strong>Bằng chứng</strong>
-                <ul>
-                  {evidenceLines(selectedCase).map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="queue-agent-explanation">
-                <div>
-                  <span>▣</span>
-                  <strong>Giải thích của Agent</strong>
-                </div>
-                <p>
-                  {selectedCase.evidence.summary ??
-                    "Agent đã phát hiện sai lệch giữa GT và prediction tại frame được chọn."}
-                </p>
-              </div>
-
-              <div className="queue-detail-section queue-recommendation-section">
-                <strong>Đề xuất xử lý</strong>
-                <p>{selectedCase.recommendation}</p>
-              </div>
-
-              <div className="queue-case-actions">
-                <Button
-                  variant="primary"
-                  disabled={!canConfirm || statusMutation.isPending}
-                  onClick={() => void confirmSelectedCase()}
-                  title="Xác nhận annotation hiện tại"
-                >
-                  {statusMutation.isPending ? "Đang cập nhật…" : "✓ Xác nhận"}
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={
-                    !selectedCase.sourceSplit || !selectedCase.sourceImageId
-                  }
-                  onClick={() =>
-                    selectedCase.sourceSplit &&
-                    selectedCase.sourceImageId &&
-                    onOpenEditor?.(
-                      selectedCase.sourceSplit,
-                      selectedCase.sourceImageId,
-                    )
-                  }
-                  title="Mở đúng ảnh trong 2D Editor"
-                >
-                  ✎ Chỉnh sửa nhãn
-                </Button>
-                <Button
-                  variant="danger"
-                  disabled={!canReview || statusMutation.isPending}
-                  onClick={() => void rejectSelectedCase()}
-                >
-                  × Bác bỏ
-                </Button>
-              </div>
-              {decisionMessage ? (
-                <div
-                  className={
-                    statusMutation.isError
-                      ? "api-inline-warning"
-                      : "api-status-message"
-                  }
-                  role={statusMutation.isError ? "alert" : "status"}
-                >
-                  {decisionMessage}
-                </div>
-              ) : null}
-              <p className="api-phase-note">
-                Editor lưu revision bất biến và tự cập nhật các QA case của cùng
-                ảnh sang trạng thái đã sửa.
-              </p>
-            </>
-          ) : (
-            <div className="queue-detail-empty">
-              Không có case phù hợp với bộ lọc hiện tại.
-            </div>
-          )}
-        </Card>
-      </section>
-
-      <section className="queue-console-bottom-grid">
-        <Card className="queue-console-table-card">
-          <div className="queue-table-titlebar">
-            <div>
-              <strong>Danh sách QA cases</strong>
-              <Badge tone="neutral">{visibleCases.length} items</Badge>
-            </div>
-            <button
-              type="button"
-              onClick={() => void casesQuery.refetch()}
-              aria-label="Làm mới danh sách"
-            >
-              ↻
-            </button>
-          </div>
-          <div className="queue-console-table-wrap">
-            <table className="queue-console-table">
-              <thead>
-                <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      disabled
-                      aria-label="Chọn tất cả case"
-                    />
-                  </th>
-                  <th>Case ID</th>
-                  <th>Sequence</th>
-                  <th>Frame</th>
-                  <th>Class</th>
-                  <th>Lỗi</th>
-                  <th>Risk</th>
-                  <th>Image ID</th>
-                  <th>Trạng thái</th>
-                  <th>Ưu tiên</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedCases.map((qaCase) => (
-                  <tr
-                    className={
-                      selectedCaseId === qaCase.id ? "is-selected" : ""
-                    }
-                    key={qaCase.id}
-                    onClick={() => setSelectedCaseId(qaCase.id)}
+      {activeTab === "frames" ? (
+        <section className="all-frames-explorer">
+          <Card className="explorer-card">
+            <div className="explorer-layout">
+              {/* Sidebar */}
+              <div className="explorer-sidebar">
+                <label>
+                  <span>Sequence (Scene)</span>
+                  <select
+                    value={selectedSequence}
+                    onChange={(event) => {
+                      setSelectedSequence(event.target.value);
+                      setSelectedFrameId("");
+                    }}
                   >
-                    <td>
-                      <input
-                        type="checkbox"
-                        disabled
-                        aria-label={`Chọn ${qaCase.id}`}
-                      />
-                    </td>
-                    <td>
-                      <button
-                        type="button"
+                    <option value="all">Tất cả sequence</option>
+                    {explorerSequences.map((sequence) => (
+                      <option key={sequence} value={sequence}>
+                        {sequence}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span>Chọn Frame ({filteredExplorerSamples.length})</span>
+                  <div className="explorer-frames-list">
+                    {filteredExplorerSamples.length > 0 ? (
+                      filteredExplorerSamples.map((sample) => (
+                        <button
+                          key={sample.id}
+                          className={`explorer-frame-item ${sample.id === selectedFrameId ? "is-active" : ""}`}
+                          onClick={() => setSelectedFrameId(sample.id)}
+                          type="button"
+                        >
+                          <strong>
+                            {sample.sampleId
+                              ? sample.sampleId.slice(0, 16) + "..."
+                              : sample.id}
+                          </strong>
+                          <span>
+                            {sample.sequenceId} · {sample.cameraCount} views
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="explorer-empty-state">
+                        Không tìm thấy frame nào.
+                      </div>
+                    )}
+                  </div>
+                </label>
+              </div>
+
+              {/* Main Content: Camera Grid */}
+              <div className="explorer-main-content">
+                {activeSample ? (
+                  <>
+                    <div className="explorer-main-heading">
+                      <h3>
+                        Frame views cho <code>{activeSample.sequenceId}</code>
+                      </h3>
+                      <Badge tone="info">
+                        {activeSample.cameras.length} camera góc
+                      </Badge>
+                    </div>
+                    <div className="camera-grid">
+                      {activeSample.cameras.map((camera) => (
+                        <div
+                          key={camera.id}
+                          className="camera-card"
+                          onClick={() => onOpenEditor?.(scopedSplit, camera.id)}
+                        >
+                          <div className="camera-thumb">
+                            <AuthenticatedImage
+                              sourcePath={camera.imageUrl}
+                              alt={camera.cameraChannel || "Camera view"}
+                              loading="lazy"
+                            />
+                          </div>
+                          <div className="camera-info">
+                            <strong>
+                              {camera.cameraChannel ?? "Camera View"}
+                            </strong>
+                            <span>
+                              {camera.width}x{camera.height}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="empty-explorer-state">
+                    <strong>Chưa chọn frame</strong>
+                    <p>
+                      Vui lòng chọn một frame từ danh sách bên trái để xem các
+                      camera góc.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        </section>
+      ) : (
+        <>
+          <section className="queue-console-workbench">
+            <Card className="queue-console-filter-panel">
+              <div className="queue-panel-heading">
+                <strong>Bộ lọc</strong>
+                <button type="button" onClick={clearFilters}>
+                  ↻ Đặt lại
+                </button>
+              </div>
+              <div className="queue-filter-stack">
+                <label>
+                  <span>Dataset</span>
+                  <select
+                    value={scopedDataset}
+                    onChange={(event) =>
+                      setSearchParameters({
+                        dataset: event.target.value,
+                        split: "product",
+                      })
+                    }
+                  >
+                    <option value="nuscenes">nuScenes</option>
+                    <option value="kitti">KITTI</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Sequence</span>
+                  <select
+                    value={sequenceFilter}
+                    onChange={(event) => setSequenceFilter(event.target.value)}
+                  >
+                    <option value="all">Tất cả sequence</option>
+                    {sequenceOptions.map((sequence) => (
+                      <option key={sequence} value={sequence}>
+                        {sequence}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>Frame</span>
+                  <input
+                    value={frameFilter}
+                    onChange={(event) => setFrameFilter(event.target.value)}
+                    placeholder="Nhập frame ID"
+                  />
+                </label>
+                <label>
+                  <span>Class</span>
+                  <select
+                    value={classFilter}
+                    onChange={(event) => setClassFilter(event.target.value)}
+                  >
+                    <option value="all">Tất cả</option>
+                    {classOptions.map((label) => (
+                      <option key={label} value={label}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>Loại lỗi</span>
+                  <select
+                    value={typeFilter}
+                    onChange={(event) =>
+                      setTypeFilter(event.target.value as FindingType | "all")
+                    }
+                  >
+                    <option value="all">Tất cả</option>
+                    {Object.entries(findingTypeLabels).map(([type, label]) => (
+                      <option key={type} value={type}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>Trạng thái review</span>
+                  <select
+                    value={statusFilter}
+                    onChange={(event) =>
+                      setStatusFilter(
+                        event.target.value as ReviewStatus | "all",
+                      )
+                    }
+                  >
+                    <option value="all">Tất cả</option>
+                    {reviewStatuses.map((status) => (
+                      <option key={status} value={status}>
+                        {statusLabels[status]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="queue-risk-filter">
+                  <span>Risk score tối thiểu</span>
+                  <div className="queue-risk-input">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      inputMode="numeric"
+                      value={minimumRisk}
+                      onChange={(event) =>
+                        setMinimumRisk(
+                          Math.min(
+                            100,
+                            Math.max(0, Number(event.target.value) || 0),
+                          ),
+                        )
+                      }
+                    />
+                    <span>/ 100</span>
+                  </div>
+                </label>
+                <label>
+                  <span>Sắp xếp theo</span>
+                  <select
+                    value={sortBy}
+                    onChange={(event) =>
+                      setSortBy(event.target.value as ApiQueueSortKey)
+                    }
+                  >
+                    <option value="priority">Ưu tiên cao → thấp</option>
+                    <option value="risk">Risk giảm dần</option>
+                    <option value="newest">Mới nhất</option>
+                  </select>
+                </label>
+              </div>
+            </Card>
+
+            <Card className="queue-console-viewer-card">
+              <ApiQueueComparisonViewer qaCase={selectedCase} />
+            </Card>
+
+            <Card className="queue-console-detail-panel">
+              {selectedCase ? (
+                <>
+                  <div className="queue-panel-heading queue-detail-heading">
+                    <div>
+                      <strong>Chi tiết case</strong>
+                      <small>{selectedCase.id}</small>
+                    </div>
+                    <Badge tone="info">API</Badge>
+                  </div>
+                  <dl className="queue-case-metadata">
+                    <div>
+                      <dt>Nguồn</dt>
+                      <dd>Dataset · {selectedCase.sourceSplit}</dd>
+                    </div>
+                    <div>
+                      <dt>Image ID</dt>
+                      <dd>{selectedCase.sourceImageId ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt>Sequence</dt>
+                      <dd>{selectedCase.sequenceId}</dd>
+                    </div>
+                    <div>
+                      <dt>Frame</dt>
+                      <dd>
+                        {selectedCase.frameIndex} · {selectedCase.frameFileName}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Class</dt>
+                      <dd>{selectedCase.className}</dd>
+                    </div>
+                    <div>
+                      <dt>Error type</dt>
+                      <dd>
+                        <Badge tone={selectedCase.priority}>
+                          {findingTypeLabels[selectedCase.errorType]}
+                        </Badge>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Risk score</dt>
+                      <dd>
+                        <Badge tone={selectedCase.priority}>
+                          {selectedCase.riskScore} / 100
+                        </Badge>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Trạng thái</dt>
+                      <dd>
+                        <StatusBadge status={selectedCase.status} />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Editor</dt>
+                      <dd>
+                        Revision{" "}
+                        {String(selectedCase.evidence.annotationRevision ?? 0)}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <div className="queue-detail-section">
+                    <strong>Bằng chứng</strong>
+                    <ul>
+                      {evidenceLines(selectedCase).map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="queue-agent-explanation">
+                    <div>
+                      <span>▣</span>
+                      <strong>Giải thích của Agent</strong>
+                    </div>
+                    <p>
+                      {selectedCase.evidence.summary ??
+                        "Agent đã phát hiện sai lệch giữa GT và prediction tại frame được chọn."}
+                    </p>
+                  </div>
+
+                  <div className="queue-detail-section queue-recommendation-section">
+                    <strong>Đề xuất xử lý</strong>
+                    <p>{selectedCase.recommendation}</p>
+                  </div>
+
+                  <div className="queue-case-actions">
+                    <Button
+                      variant="primary"
+                      disabled={!canConfirm || statusMutation.isPending}
+                      onClick={() => void confirmSelectedCase()}
+                      title="Xác nhận annotation hiện tại"
+                    >
+                      {statusMutation.isPending
+                        ? "Đang cập nhật…"
+                        : "✓ Xác nhận"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={
+                        !selectedCase.sourceSplit || !selectedCase.sourceImageId
+                      }
+                      onClick={() =>
+                        selectedCase.sourceSplit &&
+                        selectedCase.sourceImageId &&
+                        onOpenEditor?.(
+                          selectedCase.sourceSplit,
+                          selectedCase.sourceImageId,
+                        )
+                      }
+                      title="Mở đúng ảnh trong 2D Editor"
+                    >
+                      ✎ Chỉnh sửa nhãn
+                    </Button>
+                    <Button
+                      variant="danger"
+                      disabled={!canReview || statusMutation.isPending}
+                      onClick={() => void rejectSelectedCase()}
+                    >
+                      × Bác bỏ
+                    </Button>
+                  </div>
+                  {decisionMessage ? (
+                    <div
+                      className={
+                        statusMutation.isError
+                          ? "api-inline-warning"
+                          : "api-status-message"
+                      }
+                      role={statusMutation.isError ? "alert" : "status"}
+                    >
+                      {decisionMessage}
+                    </div>
+                  ) : null}
+                  <p className="api-phase-note">
+                    Editor lưu revision bất biến và tự cập nhật các QA case của
+                    cùng ảnh sang trạng thái đã sửa.
+                  </p>
+                </>
+              ) : (
+                <div className="queue-detail-empty">
+                  Không có case phù hợp với bộ lọc hiện tại.
+                </div>
+              )}
+            </Card>
+          </section>
+
+          <section className="queue-console-bottom-grid">
+            <Card className="queue-console-table-card">
+              <div className="queue-table-titlebar">
+                <div>
+                  <strong>Danh sách QA cases</strong>
+                  <Badge tone="neutral">{visibleCases.length} items</Badge>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void casesQuery.refetch()}
+                  aria-label="Làm mới danh sách"
+                >
+                  ↻
+                </button>
+              </div>
+              <div className="queue-console-table-wrap">
+                <table className="queue-console-table">
+                  <thead>
+                    <tr>
+                      <th>
+                        <input
+                          type="checkbox"
+                          disabled
+                          aria-label="Chọn tất cả case"
+                        />
+                      </th>
+                      <th>Case ID</th>
+                      <th>Sequence</th>
+                      <th>Frame</th>
+                      <th>Class</th>
+                      <th>Lỗi</th>
+                      <th>Risk</th>
+                      <th>Image ID</th>
+                      <th>Trạng thái</th>
+                      <th>Ưu tiên</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedCases.map((qaCase) => (
+                      <tr
+                        className={
+                          selectedCaseId === qaCase.id ? "is-selected" : ""
+                        }
+                        key={qaCase.id}
                         onClick={() => setSelectedCaseId(qaCase.id)}
                       >
-                        {qaCase.id}
-                      </button>
-                    </td>
-                    <td>{qaCase.sequenceId}</td>
-                    <td>{qaCase.frameIndex}</td>
-                    <td>{qaCase.className}</td>
-                    <td>{findingTypeLabels[qaCase.errorType]}</td>
-                    <td>
-                      <Badge tone={qaCase.priority}>{qaCase.riskScore}</Badge>
-                    </td>
-                    <td>{qaCase.sourceImageId ?? "—"}</td>
-                    <td>
-                      <StatusBadge status={qaCase.status} />
-                    </td>
-                    <td>
-                      <Badge tone={qaCase.priority}>
-                        {priorityLabel(qaCase.priority)}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {visibleCases.length === 0 ? (
-              <div className="queue-console-empty">
-                <strong>Không có case phù hợp</strong>
-                <span>Hãy giảm điều kiện lọc.</span>
-                <Button size="sm" variant="secondary" onClick={clearFilters}>
-                  Đặt lại bộ lọc
-                </Button>
+                        <td>
+                          <input
+                            type="checkbox"
+                            disabled
+                            aria-label={`Chọn ${qaCase.id}`}
+                          />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCaseId(qaCase.id)}
+                          >
+                            {qaCase.id}
+                          </button>
+                        </td>
+                        <td>{qaCase.sequenceId}</td>
+                        <td>{qaCase.frameIndex}</td>
+                        <td>{qaCase.className}</td>
+                        <td>{findingTypeLabels[qaCase.errorType]}</td>
+                        <td>
+                          <Badge tone={qaCase.priority}>
+                            {qaCase.riskScore}
+                          </Badge>
+                        </td>
+                        <td>{qaCase.sourceImageId ?? "—"}</td>
+                        <td>
+                          <StatusBadge status={qaCase.status} />
+                        </td>
+                        <td>
+                          <Badge tone={qaCase.priority}>
+                            {priorityLabel(qaCase.priority)}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {visibleCases.length === 0 ? (
+                  <div className="queue-console-empty">
+                    <strong>Không có case phù hợp</strong>
+                    <span>Hãy giảm điều kiện lọc.</span>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={clearFilters}
+                    >
+                      Đặt lại bộ lọc
+                    </Button>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </div>
-          <div className="queue-table-pagination">
-            <span>
-              Hiển thị{" "}
-              {visibleCases.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1} –{" "}
-              {Math.min(page * PAGE_SIZE, visibleCases.length)} trong{" "}
-              {visibleCases.length}
-            </span>
-            <label>
-              <select value={PAGE_SIZE} disabled aria-label="Số case mỗi trang">
-                <option value={PAGE_SIZE}>10 / trang</option>
-              </select>
-            </label>
-            <div>
-              <button
-                type="button"
-                disabled={page === 1}
-                onClick={() => setPage((current) => Math.max(1, current - 1))}
-              >
-                ‹
-              </button>
-              {Array.from({ length: pageCount }, (_, index) => index + 1).map(
-                (pageNumber) => (
-                  <button
-                    key={pageNumber}
-                    type="button"
-                    className={pageNumber === page ? "is-current" : ""}
-                    onClick={() => setPage(pageNumber)}
+              <div className="queue-table-pagination">
+                <span>
+                  Hiển thị{" "}
+                  {visibleCases.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1} –{" "}
+                  {Math.min(page * PAGE_SIZE, visibleCases.length)} trong{" "}
+                  {visibleCases.length}
+                </span>
+                <label>
+                  <select
+                    value={PAGE_SIZE}
+                    disabled
+                    aria-label="Số case mỗi trang"
                   >
-                    {pageNumber}
+                    <option value={PAGE_SIZE}>10 / trang</option>
+                  </select>
+                </label>
+                <div>
+                  <button
+                    type="button"
+                    disabled={page === 1}
+                    onClick={() =>
+                      setPage((current) => Math.max(1, current - 1))
+                    }
+                  >
+                    ‹
                   </button>
-                ),
-              )}
-              <button
-                type="button"
-                disabled={page === pageCount}
-                onClick={() =>
-                  setPage((current) => Math.min(pageCount, current + 1))
-                }
-              >
-                ›
-              </button>
-            </div>
-          </div>
-        </Card>
+                  {Array.from(
+                    { length: pageCount },
+                    (_, index) => index + 1,
+                  ).map((pageNumber) => (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      className={pageNumber === page ? "is-current" : ""}
+                      onClick={() => setPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={page === pageCount}
+                    onClick={() =>
+                      setPage((current) => Math.min(pageCount, current + 1))
+                    }
+                  >
+                    ›
+                  </button>
+                </div>
+              </div>
+            </Card>
 
-        <QueueAnalytics
-          errorDistribution={errorDistribution}
-          classDistribution={classDistribution}
-          totalCount={cases.length}
-          reviewedCount={reviewedCount}
-          reviewProgress={reviewProgress}
-        />
-      </section>
+            <QueueAnalytics
+              errorDistribution={errorDistribution}
+              classDistribution={classDistribution}
+              totalCount={cases.length}
+              reviewedCount={reviewedCount}
+              reviewProgress={reviewProgress}
+            />
+          </section>
+        </>
+      )}
     </div>
   );
 }

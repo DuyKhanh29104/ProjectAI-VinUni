@@ -9,7 +9,10 @@ import type {
 } from "../domain/types.ts";
 import { MockConfigurationOperations } from "./mock/configurationOperations.ts";
 import { MockReviewOperations } from "./mock/reviewOperations.ts";
-import type { AnnotationChanges, LabelGuardianRepository } from "./repository.ts";
+import type {
+  AnnotationChanges,
+  LabelGuardianRepository,
+} from "./repository.ts";
 
 /**
  * Mock adapter facade. Dataset/configuration transitions and review transitions
@@ -63,7 +66,14 @@ export class MockRepository implements LabelGuardianRepository {
     action: ReviewAction,
     reason?: string,
   ): MockState {
-    return this.review.setFindingStatus(state, findingId, toStatus, userId, action, reason);
+    return this.review.setFindingStatus(
+      state,
+      findingId,
+      toStatus,
+      userId,
+      action,
+      reason,
+    );
   }
 
   saveProposedAnnotation(
@@ -72,7 +82,12 @@ export class MockRepository implements LabelGuardianRepository {
     changes: AnnotationChanges,
     userId: string,
   ): MockState {
-    return this.review.saveProposedAnnotation(state, annotationId, changes, userId);
+    return this.review.saveProposedAnnotation(
+      state,
+      annotationId,
+      changes,
+      userId,
+    );
   }
 
   createProposedAnnotation(
@@ -81,7 +96,12 @@ export class MockRepository implements LabelGuardianRepository {
     changes: AnnotationChanges,
     userId: string,
   ): MockState {
-    return this.review.createProposedAnnotation(state, findingId, changes, userId);
+    return this.review.createProposedAnnotation(
+      state,
+      findingId,
+      changes,
+      userId,
+    );
   }
 
   approveFinding(
@@ -109,6 +129,42 @@ export class MockRepository implements LabelGuardianRepository {
     userId: string,
   ): MockState {
     return this.review.assignFinding(state, findingId, assigneeId, userId);
+  }
+
+  requestChanges(
+    state: MockState,
+    findingId: string,
+    userId: string,
+    assigneeId: string,
+    feedback: string,
+    reasonCategory:
+      "geometry" | "class" | "missing_label" | "tracking" | "other",
+  ): MockState {
+    return this.review.requestChanges(
+      state,
+      findingId,
+      userId,
+      assigneeId,
+      feedback,
+      reasonCategory,
+    );
+  }
+
+  resubmitFinding(
+    state: MockState,
+    findingId: string,
+    userId: string,
+    note?: string,
+  ): MockState {
+    return this.review.resubmitFinding(state, findingId, userId, note);
+  }
+
+  resolveFeedback(
+    state: MockState,
+    commentId: string,
+    userId: string,
+  ): MockState {
+    return this.review.resolveFeedback(state, commentId, userId);
   }
 
   reset(): MockState {

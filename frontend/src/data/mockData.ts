@@ -1,8 +1,21 @@
 import type { MockState } from "../domain/types.ts";
-import { mockAnnotations, mockEvidences, mockFindings, mockPredictions } from "./mock/review.ts";
+import {
+  mockAnnotations,
+  mockEvidences,
+  mockFindings,
+  mockPredictions,
+} from "./mock/review.ts";
 import { mockDatasets, mockFrames, mockScenes } from "./mock/catalog.ts";
 import { mockTimestamp } from "./mock/constants.ts";
-import { mockModels, mockQaRun, mockReportMetrics, mockRules, mockUsers } from "./mock/workflow.ts";
+import {
+  mockBatches,
+  mockFeedbackComments,
+  mockModels,
+  mockQaRun,
+  mockReportMetrics,
+  mockRules,
+  mockUsers,
+} from "./mock/workflow.ts";
 
 export function createInitialMockState(): MockState {
   const seed: MockState = {
@@ -13,6 +26,8 @@ export function createInitialMockState(): MockState {
     predictions: mockPredictions,
     evidences: mockEvidences,
     findings: mockFindings,
+    batches: mockBatches,
+    feedbackComments: mockFeedbackComments,
     reviewDecisions: [],
     users: mockUsers,
     reportMetrics: mockReportMetrics,

@@ -22,7 +22,9 @@ def match_labels(gt_labels: list[dict], pred_labels: list[dict]) -> dict:
     Matching không lọc theo class, để phát hiện được nhãn sai class
     (khớp vị trí tốt nhưng khác class) thay vì bị coi là không khớp.
 
-    Hàm thuần (không đụng LabelQAState) để dễ test độc lập — xem match_labels_node bên dưới.
+    Hàm thuần (không đụng LabelQAState) để tái dùng được cho pred_labels của
+    bất kỳ detector nào (không chỉ YOLO) — xem match_labels_node bên dưới và
+    app.py (so sánh matching với RT-DETR).
     """
     if not gt_labels or not pred_labels:
         return {

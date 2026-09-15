@@ -15,13 +15,10 @@ async def test_health(client):
 
 
 @pytest.mark.asyncio
-async def test_api_health_alias_uses_the_same_contract(client):
+async def test_versioned_health_uses_the_same_contract(client):
     root_response = await client.get("/health")
-    api_response = await client.get("/api/health")
     v1_response = await client.get("/api/v1/health")
 
-    assert api_response.status_code == 200
-    assert api_response.json() == root_response.json()
     assert v1_response.status_code == 200
     assert v1_response.json() == root_response.json()
 
@@ -60,9 +57,9 @@ async def test_openapi_identifies_label_guardian(client):
 
 
 @pytest.mark.asyncio
-async def test_unversioned_routes_remain_compatibility_aliases(client):
-    v1_response = await client.get("/api/v1/qa-cases?limit=1")
+async def test_unversioned_routes_are_not_exposed(client):
     legacy_response = await client.get("/api/qa-cases?limit=1")
+    legacy_health_response = await client.get("/api/health")
 
-    assert legacy_response.status_code == v1_response.status_code
-    assert legacy_response.json() == v1_response.json()
+    assert legacy_response.status_code == 404
+    assert legacy_health_response.status_code == 404

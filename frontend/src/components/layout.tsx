@@ -1,12 +1,19 @@
-import { useState, type CSSProperties, type FormEvent, type PropsWithChildren } from "react";
+import {
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type PropsWithChildren,
+} from "react";
 import {
   ArrowRight,
   Activity,
   BarChart3,
   Bell,
+  BookOpen,
   Check,
   Database,
   GitBranch,
+  Home,
   LayoutDashboard,
   ListChecks,
   Settings,
@@ -23,8 +30,23 @@ import { isApiDataSourceEnabled } from "../api/labelGuardianApi";
 import type { AppRouteDefinition } from "../config/informationArchitecture";
 import { roleLabels } from "../config/informationArchitecture";
 import authBackground from "../data/background.png";
-import type { Dataset, DemoMode, QaRun, Role, User } from "../domain/types";
+import type { Dataset, QaRun, Role, User } from "../domain/types";
 import { Badge, Button } from "./ui";
+import { Logo } from "./Logo";
+import { LoginVisualPanel } from "./LoginVisualPanel";
+
+const routeLabels: Record<PrimaryViewId, { en: string; vi: string }> = {
+  overview: { en: "QA Overview", vi: "Tổng quan QA" },
+  "qa-queue": { en: "QA Queue", vi: "Hàng đợi QA" },
+  "qa-cases": { en: "QA Cases", vi: "Danh sách Case" },
+  "dataset-run": { en: "Datasets & Runs", vi: "Dữ liệu & Tiến trình" },
+  pipeline: { en: "QA Pipeline", vi: "Quy trình QA" },
+  "annotator-workspace": { en: "2D Editor", vi: "Trình sửa 2D" },
+  reports: { en: "Reports", vi: "Báo cáo" },
+  settings: { en: "Settings", vi: "Cài đặt" },
+  tutorial: { en: "Tutorial", vi: "Hướng dẫn" },
+  "case-detail": { en: "Case Detail", vi: "Chi tiết Case" },
+};
 
 export type PrimaryViewId =
   | "overview"
@@ -35,6 +57,7 @@ export type PrimaryViewId =
   | "pipeline"
   | "annotator-workspace"
   | "settings"
+  | "tutorial"
   | "case-detail";
 
 const routeIcons: Record<PrimaryViewId, LucideIcon> = {
@@ -46,6 +69,7 @@ const routeIcons: Record<PrimaryViewId, LucideIcon> = {
   pipeline: GitBranch,
   "annotator-workspace": Tags,
   settings: Settings,
+  tutorial: BookOpen,
   "case-detail": ShieldCheck,
 };
 
@@ -58,7 +82,8 @@ const routeOrder: Record<PrimaryViewId, number> = {
   "annotator-workspace": 5,
   reports: 6,
   settings: 7,
-  "case-detail": 8,
+  tutorial: 8,
+  "case-detail": 9,
 };
 
 interface AppShellProps extends PropsWithChildren {
@@ -75,8 +100,8 @@ interface AppShellProps extends PropsWithChildren {
   onDatasetChange: (datasetId: string) => void;
   onSignOut: () => void;
   onReset: () => void;
-  demoMode: DemoMode;
-  onDemoModeChange: (mode: DemoMode) => void;
+  lang: "en" | "vi";
+  onChangeLang: (lang: "en" | "vi") => void;
 }
 
 export function AppShell({
@@ -93,26 +118,30 @@ export function AppShell({
   onDatasetChange,
   onSignOut,
   onReset,
-  demoMode,
-  onDemoModeChange,
+  lang,
+  onChangeLang,
   children,
 }: AppShellProps) {
   const [accountOpen, setAccountOpen] = useState(false);
   const apiDataSourceEnabled = isApiDataSourceEnabled();
-  const visibleRoutes = (routes.filter(
-    (route) =>
-      route.id !== "case-detail" &&
-      route.allowedRoles.includes(activeRole) &&
-      route.id in routeIcons &&
-      (!apiDataSourceEnabled || !["overview", "reports", "dataset-run"].includes(route.id)),
-  ) as Array<AppRouteDefinition & { id: PrimaryViewId }>).sort((first, second) => routeOrder[first.id] - routeOrder[second.id]);
+  const visibleRoutes = (
+    routes.filter(
+      (route) =>
+        route.id !== "case-detail" &&
+        route.id !== "pipeline" &&
+        route.allowedRoles.includes(activeRole) &&
+        route.id in routeIcons,
+    ) as Array<AppRouteDefinition & { id: PrimaryViewId }>
+  ).sort((first, second) => routeOrder[first.id] - routeOrder[second.id]);
   const activeRoute = routes.find((route) => route.id === activeView);
+
+  const t = (en: string, vi: string) => (lang === "en" ? en : vi);
 
   return (
     <div className="app-shell app-shell-dark">
       <header className="topbar app-topbar">
         <div className="topbar-mobile-brand">
-          <div className="brand-mark">LG</div>
+          <Logo size={20} />
           <div>
             <div className="brand-name">Label Guardian</div>
             <div className="brand-subtitle">Perception QA workspace</div>
@@ -120,31 +149,76 @@ export function AppShell({
         </div>
 
         <div className="topbar-context">
-          <span className="eyebrow">AI Label Quality Assurance</span>
-          <strong>{activeRoute?.label ?? "Tổng quan QA"}</strong>
+          <span className="eyebrow">
+            {t("AI Label Quality Assurance", "Đảm bảo chất lượng nhãn AI")}
+          </span>
+          <strong>
+            {activeRoute
+              ? (routeLabels[activeRoute.id as PrimaryViewId]?.[lang] ??
+                activeRoute.label)
+              : t("QA Overview", "Tổng quan QA")}
+          </strong>
         </div>
 
         <div className="topbar-actions">
-          {!apiDataSourceEnabled ? <label className="dataset-switcher">
-            <span className="sr-only">Dataset đang chọn</span>
-            <Database size={15} aria-hidden="true" />
-            <select
-              value={selectedDataset.id}
-              onChange={(event) => onDatasetChange(event.target.value)}
+          <div className="topbar-lang-switcher">
+            <button
+              type="button"
+              className={lang === "en" ? "is-active" : undefined}
+              aria-pressed={lang === "en"}
+              onClick={() => onChangeLang("en")}
             >
-              {datasets.map((dataset) => (
-                <option key={dataset.id} value={dataset.id}>
-                  {dataset.format} · {dataset.name}
-                </option>
-              ))}
-            </select>
-          </label> : null}
+              EN
+            </button>
+            <span aria-hidden="true">|</span>
+            <button
+              type="button"
+              className={lang === "vi" ? "is-active" : undefined}
+              aria-pressed={lang === "vi"}
+              onClick={() => onChangeLang("vi")}
+            >
+              VI
+            </button>
+          </div>
 
-          {!apiDataSourceEnabled ? <span className={`topbar-run-status run-${qaRun.status}`}>
-            <Activity size={14} />
-            <span>QA run</span>
-            <strong>{qaRun.status === "running" ? `${qaRun.progress}%` : qaRun.status}</strong>
-          </span> : null}
+          <a
+            className="workspace-home-link"
+            href="/"
+            aria-label="Back to Label Guardian landing page"
+            title="Back to landing page"
+          >
+            <Home size={15} aria-hidden="true" />
+            <span>{t("Landing", "Trang chủ")}</span>
+          </a>
+
+          {!apiDataSourceEnabled ? (
+            <label className="dataset-switcher">
+              <span className="sr-only">Dataset đang chọn</span>
+              <Database size={15} aria-hidden="true" />
+              <select
+                value={selectedDataset.id}
+                onChange={(event) => onDatasetChange(event.target.value)}
+              >
+                {datasets.map((dataset) => (
+                  <option key={dataset.id} value={dataset.id}>
+                    {dataset.format} · {dataset.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {!apiDataSourceEnabled ? (
+            <span className={`topbar-run-status run-${qaRun.status}`}>
+              <Activity size={14} />
+              <span>QA run</span>
+              <strong>
+                {qaRun.status === "running"
+                  ? `${qaRun.progress}%`
+                  : qaRun.status}
+              </strong>
+            </span>
+          ) : null}
 
           {allowRoleSwitch ? (
             <label className="role-switcher">
@@ -161,15 +235,25 @@ export function AppShell({
               </select>
             </label>
           ) : (
-            <span className="role-switcher authenticated-role" title="Role do quản trị viên cấp">
+            <span
+              className="role-switcher authenticated-role"
+              title="Role do quản trị viên cấp"
+            >
               <ShieldCheck size={14} aria-hidden="true" />
               {roleLabels[activeRole]}
             </span>
           )}
 
-          {!apiDataSourceEnabled ? <button className="topbar-notification" type="button" aria-label="Notifications">
-            <Bell size={16} /><span>2</span>
-          </button> : null}
+          {!apiDataSourceEnabled ? (
+            <button
+              className="topbar-notification"
+              type="button"
+              aria-label="Notifications"
+            >
+              <Bell size={16} />
+              <span>2</span>
+            </button>
+          ) : null}
 
           <div className="account-menu">
             <button
@@ -191,7 +275,11 @@ export function AppShell({
                   <strong>{activeUser.name}</strong>
                   <span>{activeUser.email}</span>
                 </div>
-                <Badge tone="info">{allowRoleSwitch ? "Mock session" : "Authenticated session"}</Badge>
+                <Badge tone="info">
+                  {allowRoleSwitch
+                    ? t("Mock session", "Phiên demo")
+                    : t("Authenticated session", "Phiên xác thực")}
+                </Badge>
                 {allowRoleSwitch ? (
                   <Button
                     variant="ghost"
@@ -201,7 +289,7 @@ export function AppShell({
                       onReset();
                     }}
                   >
-                    Reset mock data
+                    {t("Reset mock data", "Khôi phục dữ liệu demo")}
                   </Button>
                 ) : null}
                 <Button
@@ -212,7 +300,7 @@ export function AppShell({
                     onSignOut();
                   }}
                 >
-                  Đăng xuất
+                  {t("Log out", "Đăng xuất")}
                 </Button>
               </div>
             ) : null}
@@ -223,62 +311,58 @@ export function AppShell({
       <div className="workspace-layout">
         <aside className="sidebar">
           <div className="sidebar-brand">
-            <div className="brand-mark"><ShieldCheck size={17} /></div>
-            <div>
+            <Logo size={20} />
+            <div className="sidebar-brand-copy">
               <div className="brand-name">Label Guardian</div>
               <div className="brand-subtitle">Human-in-the-loop QA</div>
             </div>
           </div>
 
-          <div className="sidebar-section-label">Workspace</div>
           <nav className="sidebar-nav" aria-label="Điều hướng chính">
             {visibleRoutes.map((route) => {
               const RouteIcon = routeIcons[route.id];
+              const displayLabel = routeLabels[route.id]?.[lang] ?? route.label;
               return (
                 <button
                   className={`sidebar-nav-item ${activeView === route.id ? "is-active" : ""}`}
                   key={route.id}
                   type="button"
-                  aria-label={route.label}
+                  aria-label={displayLabel}
+                  title={displayLabel}
                   aria-current={activeView === route.id ? "page" : undefined}
                   onClick={() => onNavigate(route.id)}
                 >
                   <span className="sidebar-nav-icon" aria-hidden="true">
                     <RouteIcon size={16} strokeWidth={1.8} />
                   </span>
-                  <span>{route.label}</span>
-                  {route.id === "qa-cases" && !apiDataSourceEnabled ? <span className="nav-count">6</span> : null}
+                  <span>{displayLabel}</span>
+                  {route.id === "qa-cases" && !apiDataSourceEnabled ? (
+                    <span className="nav-count">6</span>
+                  ) : null}
                 </button>
               );
             })}
           </nav>
 
           <div className="sidebar-spacer" />
-
-          <div className="sidebar-status-card">
-            <div className="status-card-heading">
-              <span className="status-dot" />
-              <span>{apiDataSourceEnabled ? "API V1 + Supabase Auth" : "Mock environment"}</span>
-            </div>
-            <p>{apiDataSourceEnabled ? "API connected · review actions are audited." : "Local workspace · no backend writes."}</p>
-            <span className="sidebar-version">
-              {apiDataSourceEnabled ? "Private GCS dataset" : `dataset · ${selectedDataset.version}`}
-            </span>
-          </div>
         </aside>
 
-        <main className="workspace-main">
-          <div className="global-safety-banner" role="note">
-            <div className="qa-workflow-path"><span>Dataset</span><i /> <span>QA Run</span><i /> <span>Finding</span><i /> <span>Review</span><i /> <span>Fix</span></div>
-            <div className="global-safety-actions"><span>AI proposes · human decides</span>{!apiDataSourceEnabled ? <label className="demo-mode-control"><span>State</span><select aria-label="Trạng thái demo FE-25" value={demoMode} onChange={(event) => onDemoModeChange(event.target.value as DemoMode)}><option value="ready">Ready</option><option value="loading">Loading</option><option value="empty">Empty</option><option value="error">Error</option><option value="success">Success</option><option value="rejected">Rejected</option></select></label> : null}</div>
-          </div>
-          {children}
-        </main>
+        <main className="workspace-main">{children}</main>
       </div>
 
       <footer className="footer-bar app-footer">
-        <span>Label Guardian · {apiDataSourceEnabled ? "API V1 production mode" : "Mock-only frontend"}</span>
-        <span>Role: {roleLabels[activeRole]}{apiDataSourceEnabled ? " · Cloud dataset" : ` · Dataset: ${selectedDataset.format}`}</span>
+        <span>
+          Label Guardian ·{" "}
+          {apiDataSourceEnabled
+            ? t("API V1 production mode", "Chế độ production API V1")
+            : t("Mock-only frontend", "Chế độ demo frontend")}
+        </span>
+        <span>
+          {t("Role", "Vai trò")}: {roleLabels[activeRole]}
+          {apiDataSourceEnabled
+            ? t(" · Cloud dataset", " · Tập dữ liệu cloud")
+            : ` · Dataset: ${selectedDataset.format}`}
+        </span>
       </footer>
     </div>
   );
@@ -297,13 +381,21 @@ export function MockLoginScreen({
   const [selectedRole, setSelectedRole] = useState<Role>("reviewer");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState(users.find((user) => user.role === "reviewer")?.email ?? "");
+  const [email, setEmail] = useState(
+    users.find((user) => user.role === "reviewer")?.email ?? "",
+  );
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [formError, setFormError] = useState("");
   const selectedUser = users.find((user) => user.role === selectedRole);
   const availableRoles = Array.from(new Set(users.map((user) => user.role)));
+  const demoLoginRoles: Role[] = ["annotator", "reviewer", "admin"];
+
+  const quickSignIn = (role: Role) => {
+    const demoUser = users.find((user) => user.role === role);
+    onSignIn(role, demoUser?.email);
+  };
 
   const selectRole = (role: Role) => {
     setSelectedRole(role);
@@ -318,7 +410,11 @@ export function MockLoginScreen({
     setFormError("");
     setPassword("");
     setShowPassword(false);
-    setEmail(nextMode === "login" ? users.find((user) => user.role === selectedRole)?.email ?? "" : "");
+    setEmail(
+      nextMode === "login"
+        ? (users.find((user) => user.role === selectedRole)?.email ?? "")
+        : "",
+    );
   };
 
   const changeMethod = () => {
@@ -333,9 +429,13 @@ export function MockLoginScreen({
 
     if (mode === "login") {
       const normalizedEmail = email.trim().toLowerCase();
-      const user = users.find((candidate) => candidate.email.toLowerCase() === normalizedEmail);
+      const user = users.find(
+        (candidate) => candidate.email.toLowerCase() === normalizedEmail,
+      );
       if (!user || password.trim().length < 4) {
-        setFormError("Demo email was not found or the password has fewer than 4 characters.");
+        setFormError(
+          "Demo email was not found or the password has fewer than 4 characters.",
+        );
         return;
       }
       onSignIn(user.role, user.email);
@@ -351,7 +451,9 @@ export function MockLoginScreen({
       return;
     }
     if (password.length < 4) {
-      setFormError("Password must contain at least 4 characters for this demo.");
+      setFormError(
+        "Password must contain at least 4 characters for this demo.",
+      );
       return;
     }
     onRegister({
@@ -364,23 +466,78 @@ export function MockLoginScreen({
   return (
     <div
       className="mock-login-screen"
-      style={{ "--auth-background-image": `url("${authBackground}")` } as CSSProperties}
+      style={
+        {
+          "--auth-background-image": `url("${authBackground}")`,
+        } as CSSProperties
+      }
     >
       <div className="mock-login-card">
         <section className="login-form-panel">
-          <header className="mock-login-brand">
-            <span className="login-brand-mark"><ShieldCheck size={21} strokeWidth={2.2} /></span>
+          <a
+            className="mock-login-brand"
+            href="/"
+            aria-label="Back to Label Guardian landing page"
+          >
+            <Logo size={24} />
             <span className="login-brand-name">Label Guardian</span>
-          </header>
+          </a>
 
-          <div className={`login-form-content login-form-content-${mode}`} key={mode}>
+          <div
+            className={`login-form-content login-form-content-${mode}`}
+            key={mode}
+          >
             <span className="login-eyebrow">Secure perception QA</span>
-            <h1>{mode === "login" ? "Welcome back" : "Create new account"}<span>.</span></h1>
+            <h1>
+              {mode === "login" ? "Welcome back" : "Create new account"}
+              <span>.</span>
+            </h1>
             <p className="login-intro">
               {mode === "login"
                 ? "Sign in to keep every annotation accurate, traceable, and ready for review."
                 : "Start reviewing perception data with a workspace built for confident decisions."}
             </p>
+
+            {mode === "login" ? (
+              <section
+                className="demo-quick-login"
+                aria-labelledby="demo-quick-login-title"
+              >
+                <div className="demo-quick-login-heading">
+                  <div>
+                    <strong id="demo-quick-login-title">Quick demo access</strong>
+                    <span>Open a workspace instantly with any role.</span>
+                  </div>
+                  <small>No password required</small>
+                </div>
+                <div className="demo-quick-login-grid">
+                  {demoLoginRoles.map((role) => {
+                    const demoUser = users.find((user) => user.role === role);
+                    return (
+                      <button
+                        className={`demo-quick-role-button is-${role}`}
+                        type="button"
+                        key={role}
+                        aria-label={`Quick login as ${roleLabels[role]}`}
+                        onClick={() => quickSignIn(role)}
+                      >
+                        <span className="demo-role-avatar" aria-hidden="true">
+                          {demoUser?.avatarInitials ?? role.slice(0, 2).toUpperCase()}
+                        </span>
+                        <span>
+                          <strong>{roleLabels[role]}</strong>
+                          <small>{demoUser?.name ?? "Demo user"}</small>
+                        </span>
+                        <ArrowRight size={14} aria-hidden="true" />
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="demo-login-divider">
+                  <span>or use demo credentials</span>
+                </div>
+              </section>
+            ) : null}
 
             <form className="login-form" onSubmit={submitForm}>
               {mode === "register" ? (
@@ -389,13 +546,23 @@ export function MockLoginScreen({
                     <span>First name</span>
                     <span className="login-input-shell">
                       <UserRound size={17} aria-hidden="true" />
-                      <input autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="Alex" />
+                      <input
+                        autoComplete="given-name"
+                        value={firstName}
+                        onChange={(event) => setFirstName(event.target.value)}
+                        placeholder="Alex"
+                      />
                     </span>
                   </label>
                   <label className="login-field">
                     <span>Last name</span>
                     <span className="login-input-shell login-input-shell-plain">
-                      <input autoComplete="family-name" value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Morgan" />
+                      <input
+                        autoComplete="family-name"
+                        value={lastName}
+                        onChange={(event) => setLastName(event.target.value)}
+                        placeholder="Morgan"
+                      />
                     </span>
                   </label>
                 </div>
@@ -405,7 +572,13 @@ export function MockLoginScreen({
                 <span>Email address</span>
                 <span className="login-input-shell">
                   <Mail size={17} aria-hidden="true" />
-                  <input autoComplete="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" />
+                  <input
+                    autoComplete="email"
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="you@company.com"
+                  />
                 </span>
               </label>
 
@@ -413,8 +586,24 @@ export function MockLoginScreen({
                 <span>Password</span>
                 <span className="login-input-shell">
                   <LockKeyhole size={17} aria-hidden="true" />
-                  <input autoComplete={mode === "login" ? "current-password" : "new-password"} type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" />
-                  <button className="login-password-toggle" type="button" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword((visible) => !visible)}>
+                  <input
+                    autoComplete={
+                      mode === "login" ? "current-password" : "new-password"
+                    }
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    className="login-password-toggle"
+                    type="button"
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword((visible) => !visible)}
+                  >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </span>
@@ -423,22 +612,51 @@ export function MockLoginScreen({
               {mode === "login" ? (
                 <div className="login-options">
                   <label className="login-remember">
-                    <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />
-                    <span className="login-checkbox" aria-hidden="true">{rememberMe ? <Check size={13} strokeWidth={3} /> : null}</span>
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(event) => setRememberMe(event.target.checked)}
+                    />
+                    <span className="login-checkbox" aria-hidden="true">
+                      {rememberMe ? <Check size={13} strokeWidth={3} /> : null}
+                    </span>
                     Remember me
                   </label>
-                  <button className="login-text-button" type="button" onClick={() => setFormError("Password recovery is not connected yet.")}>Forgot password?</button>
+                  <button
+                    className="login-text-button"
+                    type="button"
+                    onClick={() =>
+                      setFormError("Password recovery is not connected yet.")
+                    }
+                  >
+                    Forgot password?
+                  </button>
                 </div>
               ) : null}
 
-              {formError ? <p className="login-form-error" role="alert">{formError}</p> : null}
+              {formError ? (
+                <p className="login-form-error" role="alert">
+                  {formError}
+                </p>
+              ) : null}
 
               <div className="login-actions">
-                <button className="login-button login-button-secondary" type="button" onClick={changeMethod}>
+                <button
+                  className="login-button login-button-secondary"
+                  type="button"
+                  onClick={changeMethod}
+                >
                   <span>Change method</span>
-                  <small>{selectedUser ? roleLabels[selectedUser.role] : roleLabels[selectedRole]}</small>
+                  <small>
+                    {selectedUser
+                      ? roleLabels[selectedUser.role]
+                      : roleLabels[selectedRole]}
+                  </small>
                 </button>
-                <button className="login-button login-button-primary" type="submit">
+                <button
+                  className="login-button login-button-primary"
+                  type="submit"
+                >
                   {mode === "login" ? "Sign in" : "Create account"}
                   <ArrowRight size={18} aria-hidden="true" />
                 </button>
@@ -446,33 +664,25 @@ export function MockLoginScreen({
             </form>
 
             <p className="login-switch-copy">
-              {mode === "login" ? "Don't have an account?" : "Already a member?"}{" "}
-              <button type="button" onClick={() => switchMode(mode === "login" ? "register" : "login")}>
+              {mode === "login"
+                ? "Don't have an account?"
+                : "Already a member?"}{" "}
+              <button
+                type="button"
+                onClick={() =>
+                  switchMode(mode === "login" ? "register" : "login")
+                }
+              >
                 {mode === "login" ? "Sign up" : "Log in"}
               </button>
             </p>
-            <p className="login-footnote">Demo workspace · Authentication API is not connected</p>
+            <p className="login-footnote">
+              Demo workspace · Authentication API is not connected
+            </p>
           </div>
         </section>
 
-        <aside className="login-visual" aria-label="Label Guardian perception quality workspace preview">
-          <div className="login-visual-overlay" />
-          <svg className="login-wave" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-            <path d="M0,0 H23 C7,18 28,34 18,53 C6,75 31,85 13,100 H0 Z" />
-          </svg>
-          <div className="login-visual-content">
-            <span className="visual-status"><span /> Live quality intelligence</span>
-            <div className="visual-copy">
-              <ShieldCheck size={32} strokeWidth={1.7} />
-              <p>Protect every label.<br />Trust every frame.</p>
-              <span>AI-assisted review for safer perception datasets.</span>
-            </div>
-            <div className="visual-metrics" aria-hidden="true">
-              <div><strong>98.4%</strong><span>review confidence</span></div>
-              <div><strong>24/7</strong><span>quality monitoring</span></div>
-            </div>
-          </div>
-        </aside>
+        <LoginVisualPanel />
       </div>
     </div>
   );

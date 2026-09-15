@@ -16,11 +16,17 @@ class LabelQAState(TypedDict, total=False):
 
     # Input
     image_path: str
-    label_path: str  # đường dẫn file nhãn gốc (.txt YOLO hoặc .xml Pascal VOC)
+    label_path: str  # đường dẫn nhãn gốc (.txt YOLO, .xml Pascal VOC, hoặc golden .json)
 
     # Kết quả parse nhãn gốc / YOLO inference (node load_gt_labels, run_yolo_inference)
     gt_labels: list[dict]  # [{label_id, class_name, bbox: {x1,y1,x2,y2}}]
     pred_labels: list[dict]  # [{class_name, bbox: {x1,y1,x2,y2}, confidence}]
+
+    # Detector bổ sung (node run_rtdetr_inference) — KHÔNG dùng cho
+    # match_labels/metrics/flag_issues, chỉ để so sánh/thử nghiệm qua UI.
+    # enable_rtdetr cho phép override settings.enable_rtdetr cho một lần chạy cụ thể.
+    enable_rtdetr: bool
+    rtdetr_pred_labels: list[dict]  # [{class_name, bbox: {x1,y1,x2,y2}, confidence}]
 
     # Kết quả matching (node match_labels)
     matches: list[dict]  # [{gt_id, gt_class, pred_index, pred_class, iou, class_match}]

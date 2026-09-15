@@ -32,9 +32,9 @@ async def build_report_node(state: LabelQAState) -> dict:
             f"(precision={metrics.get('precision')}, recall={metrics.get('recall')})."
         )
     else:
-        summary = "Không phát hiện nhãn nghi ngờ có lỗi so với dự đoán YOLO."
+        summary = "Không phát hiện nhãn nghi ngờ có lỗi so với dự đoán của mô hình."
 
-    llm_error = (state.get("metadata") or {}).get("llm_explain_error")
+    llm_error = (state.get("metadata") or {}).get("llm_explain_fallback_reason")
     if llm_error:
         summary += " Lưu ý: LLM giải thích bị lỗi khi gọi API, vui lòng tự đánh giá dựa trên evidence."
 

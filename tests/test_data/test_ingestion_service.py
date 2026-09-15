@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-from botocore.exceptions import ClientError
 from sqlalchemy import func, select
 
 from src.config import IngestionSettings
@@ -12,21 +11,26 @@ from src.services.ingestion.kitti_adapter import KittiAdapter
 
 class FakeObjectStorageClient:
     def __init__(self) -> None:
-        self.bucket_exists = False
-        self.created_buckets: list[dict] = []
-        self.uploads: list[tuple[str, str, str, dict]] = []
+        self._bucket_exists = False
+        self.created_buckets: list[str] = []
+        self.uploads: list[tuple[str, str, str, str | None]] = []
 
-    def head_bucket(self, **kwargs) -> None:
-        _ = kwargs["Bucket"]
-        if not self.bucket_exists:
-            raise ClientError({"Error": {"Code": "404"}}, "HeadBucket")
+    def bucket_exists(self, _bucket: str) -> bool:
+        return self._bucket_exists
 
-    def create_bucket(self, **kwargs) -> None:
-        self.bucket_exists = True
-        self.created_buckets.append(kwargs)
+    def create_bucket(self, bucket: str) -> None:
+        self._bucket_exists = True
+        self.created_buckets.append(bucket)
 
-    def upload_file(self, filename: str, bucket: str, key: str, **kwargs) -> None:
-        self.uploads.append((filename, bucket, key, kwargs["ExtraArgs"]))
+    def upload_file(
+        self,
+        filename: str,
+        bucket: str,
+        key: str,
+        *,
+        content_type: str | None = None,
+    ) -> None:
+        self.uploads.append((filename, bucket, key, content_type))
 
 
 @pytest.mark.parametrize("model", [QAObject, QAObjectProvenance])
@@ -63,8 +67,8 @@ def test_ingests_images_uploads_files_and_persists_ground_truth(ingestion_servic
     assert result.images == 12
     assert result.objects == 1
     assert result.uploads == 12
-    assert fake_storage.created_buckets == [{"Bucket": "test-bucket"}]
-    assert fake_storage.uploads[0][1:] == ("test-bucket", "frames/000000.png", {"ContentType": "image/png"})
+    assert fake_storage.created_buckets == ["test-bucket"]
+    assert fake_storage.uploads[0][1:] == ("test-bucket", "frames/000000.png", "image/png")
     with session_factory() as session:
         image = session.scalar(select(QAImage).where(QAImage.filename == "000000.png"))
         assert image is not None

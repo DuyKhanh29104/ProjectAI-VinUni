@@ -1,3 +1,4 @@
+import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -9,8 +10,8 @@ from src.agents.state import LabelQAState
 def _read_class_names(label_path: Path) -> dict[int, str] | None:
     """Read class names from common YOLO export locations and filenames."""
     filenames = ("classes.txt", "class.txt", "class.txt.txt")
-    directories = (label_path.parent, *tuple(label_path.parents)[:3])
-    for directory in dict.fromkeys(directories):
+    directories = tuple(label_path.parents)[:3]
+    for directory in directories:
         for filename in filenames:
             candidate = directory / filename
             if candidate.is_file():
@@ -70,6 +71,35 @@ def _parse_voc_xml(label_path: Path) -> list[dict]:
     return labels
 
 
+def _parse_golden_json(label_path: Path) -> list[dict]:
+    """Parse the JSON annotation schema used by ``eval/golden_v0_1``."""
+    payload = json.loads(label_path.read_text(encoding="utf-8-sig"))
+    if not isinstance(payload, dict) or not isinstance(payload.get("labels"), list):
+        raise ValueError("Golden JSON must contain a labels list")
+
+    labels = []
+    for index, raw_label in enumerate(payload["labels"]):
+        if not isinstance(raw_label, dict):
+            raise ValueError(f"labels[{index}] must be an object")
+        label_id = raw_label.get("label_id")
+        class_name = raw_label.get("class_name")
+        raw_bbox = raw_label.get("bbox")
+        if not isinstance(label_id, str) or not label_id:
+            raise ValueError(f"labels[{index}] is missing label_id")
+        if not isinstance(class_name, str) or not class_name:
+            raise ValueError(f"labels[{index}] is missing class_name")
+        if not isinstance(raw_bbox, dict):
+            raise ValueError(f"labels[{index}] is missing bbox")
+        try:
+            bbox = {key: float(raw_bbox[key]) for key in ("x1", "y1", "x2", "y2")}
+        except (KeyError, TypeError, ValueError) as error:
+            raise ValueError(f"labels[{index}] has an invalid bbox") from error
+        if bbox["x2"] <= bbox["x1"] or bbox["y2"] <= bbox["y1"]:
+            raise ValueError(f"labels[{index}] bbox must have positive area")
+        labels.append({"label_id": label_id, "class_name": class_name, "bbox": bbox})
+    return labels
+
+
 def _candidate_label_paths(image_path: Path) -> list[Path]:
     """Đoán vị trí file nhãn gốc chỉ từ đường dẫn ảnh, theo các quy ước phổ biến.
 
@@ -93,7 +123,7 @@ def _candidate_label_paths(image_path: Path) -> list[Path]:
 
 
 async def load_gt_labels_node(state: LabelQAState) -> dict:
-    """Parse file nhãn gốc (YOLO .txt hoặc Pascal VOC .xml) thành gt_labels.
+    """Parse file nhãn gốc (YOLO, Pascal VOC, hoặc golden JSON) thành gt_labels.
 
     Nếu không truyền `label_path`, tự đoán vị trí file nhãn từ `image_path`
     (xem `_candidate_label_paths`) — cho phép input chỉ cần mỗi ảnh.
@@ -123,14 +153,19 @@ async def load_gt_labels_node(state: LabelQAState) -> dict:
         return {"error": f"Không tìm thấy file nhãn: {label_path}"}
 
     suffix = path.suffix.lower()
-    if suffix not in {".txt", ".xml"}:
+    if suffix not in {".txt", ".xml", ".json"}:
         return {
             "error": f"Định dạng nhãn không được hỗ trợ: {path.suffix} "
-            "(chỉ hỗ trợ .txt YOLO hoặc .xml Pascal VOC)"
+            "(chỉ hỗ trợ .txt YOLO, .xml Pascal VOC, hoặc .json golden testset)"
         }
 
     try:
-        gt_labels = _parse_yolo_txt(path, Path(image_path)) if suffix == ".txt" else _parse_voc_xml(path)
+        parsers = {
+            ".txt": lambda: _parse_yolo_txt(path, Path(image_path)),
+            ".xml": lambda: _parse_voc_xml(path),
+            ".json": lambda: _parse_golden_json(path),
+        }
+        gt_labels = parsers[suffix]()
     except Exception as e:
         return {"error": f"Lỗi khi đọc file nhãn {label_path}: {e}"}
 

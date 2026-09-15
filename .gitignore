@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+cache/
 *.py[cod]
 *.so
 *.egg-info/
@@ -41,10 +42,13 @@ Thumbs.db
 data/
 /kitti/
 /nuscenes/
+/eval/golden_v0_1/
+/eval/golden_v0_1.zip
+.dvc/tmp/
 *.db
 *.sqlite3
 
-# Model weights are downloaded at runtime; publish them through artifact storage/DVC instead.
+# Model weights are downloaded at runtime or bundled in the production image.
 *.pt
 weights/
 runs/

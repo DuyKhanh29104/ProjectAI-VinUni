@@ -302,7 +302,21 @@ export function MockQAQueueView({
             <label><span>Severity</span><select value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value as Severity | "all")}><option value="all">Tất cả</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Warning</option><option value="low">Low</option></select></label>
             <label><span>Annotator</span><select value={annotatorFilter} onChange={(event) => setAnnotatorFilter(event.target.value)}><option value="all">Tất cả</option>{state.users.filter((user) => user.role !== "admin").map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
             <label><span>Trạng thái review</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as ReviewStatus | "all")}><option value="all">Tất cả</option>{reviewStatuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select></label>
-            <label className="queue-risk-filter"><span>Risk score <strong>{minimumRisk}</strong></span><input type="range" min="0" max="100" value={minimumRisk} onChange={(event) => setMinimumRisk(Number(event.target.value))} /></label>
+            <label className="queue-risk-filter">
+              <span>Risk score tối thiểu</span>
+              <div className="queue-risk-input">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  inputMode="numeric"
+                  value={minimumRisk}
+                  onChange={(event) => setMinimumRisk(Math.min(100, Math.max(0, Number(event.target.value) || 0)))}
+                />
+                <span>/ 100</span>
+              </div>
+            </label>
             <label><span>Sắp xếp theo độ ưu tiên</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as QueueSortKey)}><option value="priority">Cao → Thấp</option><option value="risk">Risk giảm dần</option><option value="newest">Mới nhất</option></select></label>
           </div>
         </Card>

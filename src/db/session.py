@@ -54,10 +54,12 @@ def normalize_sync_database_url(database_url: str) -> str:
     return str(parsed_url.set(drivername="postgresql+psycopg").render_as_string(hide_password=False))
 
 
-def create_database_engine(database_url: str) -> AsyncEngine:
+def create_database_engine(database_url: str, *, pool_size: int = 5, max_overflow: int = 10) -> AsyncEngine:
     """Create the application's async database engine."""
     return create_async_engine(
         normalize_async_database_url(database_url),
+        pool_size=pool_size,
+        max_overflow=max_overflow,
         pool_pre_ping=True,
         connect_args={"statement_cache_size": 0},
     )

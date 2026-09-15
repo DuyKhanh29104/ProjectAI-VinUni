@@ -11,8 +11,9 @@ Install the optional runtime before running the agent locally:
 python -m pip install -e ".[agent-yolo]"
 ```
 
-CI installs the `agent` extra for deterministic unit tests. The `agent-yolo`
-extra additionally installs Ultralytics/Torch for local model inference.
+Set `OPENAI_API_KEY` in `.env` for LLM explanations. `MODEL_NAME` defaults to
+`gpt-4o-mini`. The `agent-yolo` extra additionally installs Ultralytics/Torch
+for local model inference.
 
 ## 1. Bài toán và giả định
 
@@ -244,7 +245,7 @@ caller tự soạn tay sai định dạng, hoặc dữ liệu bất thường t�
 
 ## 8. LLM explain — structured output
 
-`llm_explain_node` gọi `get_llm().with_structured_output(QAIssueExplanationBatch)`
+`llm_explain_node` gọi `get_agent_llm().with_structured_output(QAIssueExplanationBatch)`
 (`src/models/agent_schemas.py`) để ép LLM trả về đúng schema thay vì text tự do khó
 parse:
 
@@ -329,8 +330,8 @@ src/agents/
     └── report.py
 
 src/services/
-├── agent_llm.py           # get_agent_llm() — explanation client theo provider
-├── llm.py                 # client Gemini tương thích cũ
+├── agent_llm.py           # get_agent_llm() — OpenAI explanation client
+├── llm.py                 # OpenAI client tương thích cũ
 └── yolo.py                # lazy cached loader + class filter helpers
 
 src/models/agent_schemas.py # Label QA request/report and explanation contracts
@@ -381,8 +382,8 @@ result = await agent.ainvoke({
 ## 12. YOLO inference (`services/yolo.py`, `nodes/yolo_inference.py`)
 
 - Model lấy từ `settings.yolo_model_name` (config `YOLO_MODEL_NAME`, mặc định
-  `"yolo26x.pt"` — pretrained COCO, Ultralytics tự tải về nếu chưa có trong
-  cache local ở lần chạy đầu tiên, khá nặng và chậm).
+  `"yolo26n.pt"` — pretrained COCO, Ultralytics tự tải về nếu chưa có trong
+  cache local ở lần chạy đầu tiên; Docker production đã bundle checkpoint này).
 - `get_yolo_model()` cache bằng `lru_cache` — model chỉ load/tải một lần cho
   cả process, không phải load lại mỗi request.
 - `settings.yolo_confidence_threshold` (mặc định 0.25) — ngưỡng confidence khi
@@ -392,26 +393,12 @@ result = await agent.ainvoke({
   bỏ sót hoặc gán nhầm class COCO gần giống — cân nhắc trỏ `yolo_model_name`
   sang file `.pt` tự train nếu cần độ chính xác cao hơn cho domain riêng.
 
-## 13. Chưa làm (ngoài phạm vi hiện tại)
+## 13. Giới hạn hiện tại
 
-- `src/api/routes.py` vẫn dùng route `/chat` mẫu cũ (`ChatRequest`/`ChatResponse`),
-  chưa nối sang `LabelQARequest`/`LabelQAReport`. Cần route mới kiểu
-  `POST /api/v1/label-qa` gọi `agent.ainvoke(...)` rồi trả `result["qa_report"]`.
+- API chạy Agent theo từng ảnh qua
+  `POST /api/v1/dataset/images/{split}/{image_id}/evaluate`; không nhận đường
+  dẫn file tùy ý từ frontend.
 - `load_gt_labels` mới hỗ trợ YOLO `.txt` và Pascal VOC `.xml`; chưa hỗ trợ
-  COCO JSON (1 file chung cho nhiều ảnh) hay các định dạng export khác.
+  đọc trực tiếp COCO JSON. Dữ liệu COCO cloud phải đi qua ingestion để được
+  chuẩn hóa vào PostgreSQL trước.
 - Threshold ở mục 4 là giá trị khởi điểm, chưa được tune trên dataset thật.
-
-## 14. Detector khác đã thử và loại bỏ
-
-Ngoài YOLO (detector chính thức duy nhất hiện tại), đã thử và gỡ khỏi pipeline:
-
-- **RT-DETR** (`RTDETR` từ Ultralytics) — từng chạy song song để so sánh qua
-  UI (`run_rtdetr_inference`, `app.py`), kèm bộ luật riêng đối chiếu nhãn gốc
-  với đồng thời cả 2 model (`flag_issues_ensemble`). Đã gỡ hoàn toàn cả model,
-  node, bộ luật ensemble và phần UI liên quan.
-- **VLM detection** (Gemini/OpenAI đa phương thức qua API làm detector thứ 2,
-  output normalized bbox) và **YOLO-seg segmentation** (mask polygon bổ sung)
-  — từng là node riêng (`vlm_detection.py`, `segmentation.py`).
-- **OWLv2** (zero-shot object detection local qua `transformers`) làm backend
-  cho VLM detection — bị bỏ vì cần `candidate_labels` biết trước và chậm trên
-  máy CPU-only.

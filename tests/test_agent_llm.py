@@ -1,5 +1,3 @@
-from types import SimpleNamespace
-
 import pytest
 
 from src.services import agent_llm
@@ -10,23 +8,20 @@ class _Client:
         self.kwargs = kwargs
 
 
-def _settings(**overrides):
-    values = {
-        "label_qa_llm_provider": "auto",
-        "openai_api_key": "",
-        "google_api_key": None,
-        "model_name": "gpt-4o-mini",
-        "google_model_name": "gemini-flash-latest",
-        "llm_temperature": 0.7,
-    }
-    values.update(overrides)
-    return SimpleNamespace(**values)
-
-
-def test_auto_prefers_openai_when_both_keys_are_available(monkeypatch: pytest.MonkeyPatch):
-    google_key = SimpleNamespace(get_secret_value=lambda: "gemini-key")
-    monkeypatch.setattr(agent_llm, "get_settings", lambda: _settings(openai_api_key=" openai-key ", google_api_key=google_key))
-    monkeypatch.setattr(agent_llm, "import_module", lambda name: SimpleNamespace(ChatOpenAI=_Client))
+def test_agent_uses_trimmed_openai_api_key(monkeypatch: pytest.MonkeyPatch):
+    settings = type(
+        "SettingsStub",
+        (),
+        {
+            "llm_provider": "auto",
+            "openai_api_key": " openai-key ",
+            "google_api_key": "",
+            "model_name": "gpt-4o-mini",
+            "llm_temperature": 0.7,
+        },
+    )()
+    monkeypatch.setattr(agent_llm, "get_settings", lambda: settings)
+    monkeypatch.setattr(agent_llm, "ChatOpenAI", _Client)
 
     client = agent_llm.get_agent_llm()
 
@@ -34,19 +29,40 @@ def test_auto_prefers_openai_when_both_keys_are_available(monkeypatch: pytest.Mo
     assert client.kwargs["model"] == "gpt-4o-mini"
 
 
-def test_gemini_provider_uses_gemini_client(monkeypatch: pytest.MonkeyPatch):
-    google_key = SimpleNamespace(get_secret_value=lambda: "gemini-key")
-    monkeypatch.setattr(agent_llm, "get_settings", lambda: _settings(label_qa_llm_provider="gemini", google_api_key=google_key))
-    monkeypatch.setattr(agent_llm, "import_module", lambda name: SimpleNamespace(ChatGoogleGenerativeAI=_Client))
+def test_agent_uses_google_api_key_when_openai_is_missing(monkeypatch: pytest.MonkeyPatch):
+    settings = type(
+        "SettingsStub",
+        (),
+        {
+            "llm_provider": "auto",
+            "openai_api_key": "  ",
+            "google_api_key": " google-key ",
+            "model_name": "gemini-1.5-flash",
+            "llm_temperature": 0.7,
+        },
+    )()
+    monkeypatch.setattr(agent_llm, "get_settings", lambda: settings)
+    monkeypatch.setattr(agent_llm, "_get_google_chat_model_class", lambda: _Client)
 
     client = agent_llm.get_agent_llm()
 
-    assert client.kwargs["google_api_key"] == "gemini-key"
-    assert client.kwargs["model"] == "gemini-flash-latest"
+    assert client.kwargs["google_api_key"] == "google-key"
+    assert client.kwargs["model"] == "gemini-1.5-flash"
 
 
-def test_forced_openai_requires_its_key(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(agent_llm, "get_settings", lambda: _settings(label_qa_llm_provider="openai"))
+def test_agent_requires_any_llm_api_key(monkeypatch: pytest.MonkeyPatch):
+    settings = type(
+        "SettingsStub",
+        (),
+        {
+            "llm_provider": "auto",
+            "openai_api_key": "  ",
+            "google_api_key": "",
+            "model_name": "gpt-4o-mini",
+            "llm_temperature": 0.7,
+        },
+    )()
+    monkeypatch.setattr(agent_llm, "get_settings", lambda: settings)
 
-    with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
+    with pytest.raises(RuntimeError, match="OPENAI_API_KEY or GOOGLE_API_KEY"):
         agent_llm.get_agent_llm()

@@ -7,6 +7,7 @@ import type {
   PipelineRunListDto,
   QaCaseDto,
   QaCaseListDto,
+  RealDatasetBatchEvaluationDto,
   RealDatasetEvaluationDto,
   RealDatasetFrameSampleListDto,
   RealDatasetImageListDto,
@@ -26,11 +27,7 @@ export class LabelGuardianApiError extends Error {
   readonly status: number;
   readonly code?: string;
 
-  constructor(
-    message: string,
-    status: number,
-    code?: string,
-  ) {
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.name = "LabelGuardianApiError";
     this.status = status;
@@ -60,7 +57,11 @@ async function requestJson<T>(
     let message = `API request failed with status ${response.status}`;
     let code: string | undefined;
     try {
-      const body = (await response.json()) as { message?: string; detail?: string; code?: string };
+      const body = (await response.json()) as {
+        message?: string;
+        detail?: string;
+        code?: string;
+      };
       message = body.message ?? body.detail ?? message;
       code = body.code;
     } catch {
@@ -72,16 +73,21 @@ async function requestJson<T>(
 }
 
 async function requestAsset(path: string, signal?: AbortSignal): Promise<Blob> {
-  const resolvedUrl = path.startsWith("http://") || path.startsWith("https://")
-    ? path
-    : `${API_BASE_URL}${path}`;
+  const resolvedUrl =
+    path.startsWith("http://") || path.startsWith("https://")
+      ? path
+      : `${API_BASE_URL}${path}`;
   const token = await getAccessToken();
   const target = new URL(resolvedUrl, window.location.origin);
-  const apiOrigin = new URL(API_BASE_URL || window.location.origin, window.location.origin).origin;
+  const apiOrigin = new URL(
+    API_BASE_URL || window.location.origin,
+    window.location.origin,
+  ).origin;
   const response = await fetch(target, {
-    headers: token && target.origin === apiOrigin
-      ? { Authorization: `Bearer ${token}` }
-      : undefined,
+    headers:
+      token && target.origin === apiOrigin
+        ? { Authorization: `Bearer ${token}` }
+        : undefined,
     signal,
   });
   if (!response.ok) {
@@ -94,7 +100,10 @@ async function requestAsset(path: string, signal?: AbortSignal): Promise<Blob> {
 }
 
 export const labelGuardianApiV1 = {
-  getMyProfile(accessToken: string, signal?: AbortSignal): Promise<AuthenticatedUserDto> {
+  getMyProfile(
+    accessToken: string,
+    signal?: AbortSignal,
+  ): Promise<AuthenticatedUserDto> {
     return requestJson<AuthenticatedUserDto>(
       `${API_V1_PREFIX}/auth/me`,
       signal,
@@ -109,7 +118,10 @@ export const labelGuardianApiV1 = {
   },
 
   listApplicationUsers(signal?: AbortSignal): Promise<ApplicationUserListDto> {
-    return requestJson<ApplicationUserListDto>(`${API_V1_PREFIX}/auth/users`, signal);
+    return requestJson<ApplicationUserListDto>(
+      `${API_V1_PREFIX}/auth/users`,
+      signal,
+    );
   },
 
   updateApplicationUserRole(
@@ -127,12 +139,21 @@ export const labelGuardianApiV1 = {
 
   listQaCases(
     signal?: AbortSignal,
-    filters: { split?: string; sourceImageId?: string } = {},
+    filters: {
+      split?: string;
+      datasetId?: string;
+      sourceImageId?: string;
+    } = {},
   ): Promise<QaCaseListDto> {
     const parameters = new URLSearchParams({ limit: "200" });
     if (filters.split) parameters.set("split", filters.split);
-    if (filters.sourceImageId) parameters.set("sourceImageId", filters.sourceImageId);
-    return requestJson<QaCaseListDto>(`${API_V1_PREFIX}/qa-cases?${parameters}`, signal);
+    if (filters.datasetId) parameters.set("datasetId", filters.datasetId);
+    if (filters.sourceImageId)
+      parameters.set("sourceImageId", filters.sourceImageId);
+    return requestJson<QaCaseListDto>(
+      `${API_V1_PREFIX}/qa-cases?${parameters}`,
+      signal,
+    );
   },
 
   updateQaCaseStatus(
@@ -156,10 +177,16 @@ export const labelGuardianApiV1 = {
     signal?: AbortSignal,
     dataset?: string,
   ): Promise<RealDatasetImageListDto> {
-    const parameters = new URLSearchParams({ limit: "24", offset: String(offset) });
+    const parameters = new URLSearchParams({
+      limit: "24",
+      offset: String(offset),
+    });
     if (split) parameters.set("split", split);
     if (dataset) parameters.set("dataset", dataset);
-    return requestJson<RealDatasetImageListDto>(`${API_V1_PREFIX}/dataset/images?${parameters}`, signal);
+    return requestJson<RealDatasetImageListDto>(
+      `${API_V1_PREFIX}/dataset/images?${parameters}`,
+      signal,
+    );
   },
 
   listRealDatasetFrameSamples(
@@ -167,11 +194,36 @@ export const labelGuardianApiV1 = {
     offset = 0,
     signal?: AbortSignal,
     dataset?: string,
+    sequenceId?: string,
+    limit = 100,
   ): Promise<RealDatasetFrameSampleListDto> {
-    const parameters = new URLSearchParams({ limit: "8", offset: String(offset) });
+    const parameters = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
     if (split) parameters.set("split", split);
     if (dataset) parameters.set("dataset", dataset);
-    return requestJson<RealDatasetFrameSampleListDto>(`${API_V1_PREFIX}/dataset/frame-samples?${parameters}`, signal);
+    if (sequenceId) parameters.set("sequence_id", sequenceId);
+    return requestJson<RealDatasetFrameSampleListDto>(
+      `${API_V1_PREFIX}/dataset/frame-samples?${parameters}`,
+      signal,
+    );
+  },
+
+  listRealDatasetFrameSequences(
+    split: string | undefined,
+    signal?: AbortSignal,
+    dataset?: string,
+  ): Promise<string[]> {
+    const parameters = new URLSearchParams();
+    if (split) parameters.set("split", split);
+    if (dataset) parameters.set("dataset", dataset);
+    const serialized = parameters.toString();
+    const query = serialized ? `?${serialized}` : "";
+    return requestJson<string[]>(
+      `${API_V1_PREFIX}/dataset/frame-sequences${query}`,
+      signal,
+    );
   },
 
   evaluateRealDatasetImage(
@@ -192,7 +244,44 @@ export const labelGuardianApiV1 = {
     );
   },
 
-  getImageAnnotations(split: string, imageId: string, signal?: AbortSignal): Promise<AnnotationDocumentDto> {
+  async getRealDatasetImageEvaluation(
+    split: string,
+    imageId: string,
+    signal?: AbortSignal,
+  ): Promise<RealDatasetEvaluationDto | null> {
+    try {
+      return await requestJson<RealDatasetEvaluationDto>(
+        `${API_V1_PREFIX}/dataset/images/${encodeURIComponent(split)}/${encodeURIComponent(imageId)}/evaluation`,
+        signal,
+      );
+    } catch (error) {
+      if (error instanceof LabelGuardianApiError && error.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  },
+
+  evaluateRealDatasetImagesBatch(
+    split: string,
+    imageIds: string[],
+    force = false,
+    persist = true,
+    signal?: AbortSignal,
+  ): Promise<RealDatasetBatchEvaluationDto> {
+    return requestJson<RealDatasetBatchEvaluationDto>(
+      `${API_V1_PREFIX}/dataset/images/${encodeURIComponent(split)}/evaluate-batch`,
+      signal,
+      "POST",
+      { imageIds, force, persist },
+    );
+  },
+
+  getImageAnnotations(
+    split: string,
+    imageId: string,
+    signal?: AbortSignal,
+  ): Promise<AnnotationDocumentDto> {
     return requestJson<AnnotationDocumentDto>(
       `${API_V1_PREFIX}/dataset/images/${encodeURIComponent(split)}/${encodeURIComponent(imageId)}/annotations`,
       signal,
@@ -202,7 +291,12 @@ export const labelGuardianApiV1 = {
   saveImageAnnotations(
     split: string,
     imageId: string,
-    payload: { expectedRevision: number; labels: RealDatasetImageListDto["results"][number]["labels"]; actorId?: string; changeNote?: string },
+    payload: {
+      expectedRevision: number;
+      labels: RealDatasetImageListDto["results"][number]["labels"];
+      actorId?: string;
+      changeNote?: string;
+    },
     signal?: AbortSignal,
   ): Promise<AnnotationDocumentDto> {
     return requestJson<AnnotationDocumentDto>(
@@ -213,7 +307,11 @@ export const labelGuardianApiV1 = {
     );
   },
 
-  getImageAnnotationHistory(split: string, imageId: string, signal?: AbortSignal): Promise<AnnotationRevisionListDto> {
+  getImageAnnotationHistory(
+    split: string,
+    imageId: string,
+    signal?: AbortSignal,
+  ): Promise<AnnotationRevisionListDto> {
     return requestJson<AnnotationRevisionListDto>(
       `${API_V1_PREFIX}/dataset/images/${encodeURIComponent(split)}/${encodeURIComponent(imageId)}/annotations/history`,
       signal,
@@ -223,7 +321,12 @@ export const labelGuardianApiV1 = {
   restoreImageAnnotations(
     split: string,
     imageId: string,
-    payload: { expectedRevision: number; targetRevision: number; actorId?: string; changeNote?: string },
+    payload: {
+      expectedRevision: number;
+      targetRevision: number;
+      actorId?: string;
+      changeNote?: string;
+    },
     signal?: AbortSignal,
   ): Promise<AnnotationDocumentDto> {
     return requestJson<AnnotationDocumentDto>(
@@ -235,21 +338,28 @@ export const labelGuardianApiV1 = {
   },
 
   listPipelineRuns(signal?: AbortSignal): Promise<PipelineRunListDto> {
-    return requestJson<PipelineRunListDto>(`${API_V1_PREFIX}/ingestion/runs?limit=20`, signal);
+    return requestJson<PipelineRunListDto>(
+      `${API_V1_PREFIX}/ingestion/runs?limit=20`,
+      signal,
+    );
   },
 
   getPipelineRun(runId: string, signal?: AbortSignal): Promise<PipelineRunDto> {
-    return requestJson<PipelineRunDto>(`${API_V1_PREFIX}/ingestion/runs/${encodeURIComponent(runId)}`, signal);
+    return requestJson<PipelineRunDto>(
+      `${API_V1_PREFIX}/ingestion/runs/${encodeURIComponent(runId)}`,
+      signal,
+    );
   },
 
   resolveAssetUrl(path: string): string {
-    return path.startsWith("http://") || path.startsWith("https://") ? path : `${API_BASE_URL}${path}`;
+    return path.startsWith("http://") || path.startsWith("https://")
+      ? path
+      : `${API_BASE_URL}${path}`;
   },
 };
 
-/** @deprecated Use labelGuardianApiV1 in new code. */
-export const labelGuardianApi = labelGuardianApiV1;
-
 export function isApiDataSourceEnabled(): boolean {
-  return (runtimeEnvironment?.VITE_DATA_SOURCE ?? "api").toLowerCase() === "api";
+  return (
+    (runtimeEnvironment?.VITE_DATA_SOURCE ?? "api").toLowerCase() === "api"
+  );
 }

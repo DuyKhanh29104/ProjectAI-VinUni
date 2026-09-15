@@ -1,4 +1,9 @@
-import type { AnnotationRecord, Evidence, Finding, PredictionRecord } from "../../domain/types.ts";
+import type {
+  AnnotationRecord,
+  Evidence,
+  Finding,
+  PredictionRecord,
+} from "../../domain/types.ts";
 import { mockTimestamp } from "./constants.ts";
 
 export const mockAnnotations: AnnotationRecord[] = [
@@ -165,7 +170,8 @@ export const mockEvidences: Evidence[] = [
     kind: "temporal",
     metric: "track continuity",
     value: "track-44 → track-45",
-    description: "ID object thay đổi giữa hai frame liên tiếp dù quỹ đạo gần như liên tục.",
+    description:
+      "ID object thay đổi giữa hai frame liên tiếp dù quỹ đạo gần như liên tục.",
   },
   {
     id: "evidence-004",
@@ -173,14 +179,16 @@ export const mockEvidences: Evidence[] = [
     metric: "box displacement",
     value: "18.4 px",
     threshold: "> 12 px",
-    description: "Tâm bounding box dịch chuyển đột ngột so với vận tốc trung bình của track.",
+    description:
+      "Tâm bounding box dịch chuyển đột ngột so với vận tốc trung bình của track.",
   },
   {
     id: "evidence-005",
     kind: "context",
     metric: "class prior",
     value: "cyclist",
-    description: "Class cyclist phù hợp với hình dạng object; prediction bicycle có confidence thấp.",
+    description:
+      "Class cyclist phù hợp với hình dạng object; prediction bicycle có confidence thấp.",
   },
   {
     id: "evidence-006",
@@ -188,7 +196,8 @@ export const mockEvidences: Evidence[] = [
     metric: "missing object confidence",
     value: 0.83,
     threshold: "> 0.80",
-    description: "Model phát hiện một object ổn định nhưng annotation hiện tại không có object tương ứng.",
+    description:
+      "Model phát hiện một object ổn định nhưng annotation hiện tại không có object tương ứng.",
   },
 ];
 
@@ -196,7 +205,7 @@ export const mockFindings: Finding[] = [
   {
     id: "finding-001",
     datasetId: "dataset-kitti-demo",
-    datasetVersion: "dvc://kitti-demo@v1.2",
+    datasetVersion: "kitti-demo@v1.2",
     qaRunId: "qa-run-demo-001",
     frameId: "frame-urban-001",
     sceneId: "scene-urban-001",
@@ -207,10 +216,14 @@ export const mockFindings: Finding[] = [
     riskScore: 0.92,
     priority: 1,
     status: "unreviewed",
+    workflowStage: "submitted",
+    batchId: "batch-kitti-urban-aug",
     title: "Bounding box có dấu hiệu lệch vị trí",
     summary: "Box gốc không khớp tốt với prediction tham chiếu.",
-    explanation: "IoU thấp hơn ngưỡng và tâm box lệch theo hướng ngược với quỹ đạo của track.",
-    recommendation: "Kiểm tra lại biên trái/phải của box trên frame hiện tại và hai frame lân cận.",
+    explanation:
+      "IoU thấp hơn ngưỡng và tâm box lệch theo hướng ngược với quỹ đạo của track.",
+    recommendation:
+      "Kiểm tra lại biên trái/phải của box trên frame hiện tại và hai frame lân cận.",
     evidenceIds: ["evidence-001", "evidence-004"],
     createdAt: mockTimestamp,
     updatedAt: mockTimestamp,
@@ -221,7 +234,7 @@ export const mockFindings: Finding[] = [
   {
     id: "finding-002",
     datasetId: "dataset-kitti-demo",
-    datasetVersion: "dvc://kitti-demo@v1.2",
+    datasetVersion: "kitti-demo@v1.2",
     qaRunId: "qa-run-demo-001",
     frameId: "frame-urban-002",
     sceneId: "scene-urban-001",
@@ -232,9 +245,12 @@ export const mockFindings: Finding[] = [
     riskScore: 0.78,
     priority: 3,
     status: "unreviewed",
+    workflowStage: "assigned",
+    batchId: "batch-kitti-urban-aug",
     title: "Class có thể bị gán sai",
     summary: "Nhãn gốc là car nhưng model nghiêng về class van.",
-    explanation: "Model dự đoán van với confidence 0.74; cần kiểm tra hình dạng và ngữ cảnh object.",
+    explanation:
+      "Model dự đoán van với confidence 0.74; cần kiểm tra hình dạng và ngữ cảnh object.",
     recommendation: "So sánh với class ở các frame khác trước khi đổi class.",
     evidenceIds: ["evidence-002"],
     createdAt: mockTimestamp,
@@ -246,7 +262,7 @@ export const mockFindings: Finding[] = [
   {
     id: "finding-003",
     datasetId: "dataset-kitti-demo",
-    datasetVersion: "dvc://kitti-demo@v1.2",
+    datasetVersion: "kitti-demo@v1.2",
     qaRunId: "qa-run-demo-001",
     frameId: "frame-urban-003",
     sceneId: "scene-urban-001",
@@ -257,9 +273,12 @@ export const mockFindings: Finding[] = [
     riskScore: 0.97,
     priority: 2,
     status: "unreviewed",
+    workflowStage: "submitted",
+    batchId: "batch-kitti-urban-aug",
     title: "Track ID thay đổi bất thường",
     summary: "Object có khả năng chuyển từ track-44 sang track-45.",
-    explanation: "Quỹ đạo liên tục nhưng ID trong prediction thay đổi giữa các frame kế tiếp.",
+    explanation:
+      "Quỹ đạo liên tục nhưng ID trong prediction thay đổi giữa các frame kế tiếp.",
     recommendation: "Kiểm tra track trên toàn sequence và xác nhận ID đúng.",
     evidenceIds: ["evidence-003"],
     createdAt: mockTimestamp,
@@ -271,7 +290,7 @@ export const mockFindings: Finding[] = [
   {
     id: "finding-004",
     datasetId: "dataset-kitti-demo",
-    datasetVersion: "dvc://kitti-demo@v1.2",
+    datasetVersion: "kitti-demo@v1.2",
     qaRunId: "qa-run-demo-001",
     frameId: "frame-highway-001",
     sceneId: "scene-highway-002",
@@ -282,10 +301,14 @@ export const mockFindings: Finding[] = [
     riskScore: 0.86,
     priority: 4,
     status: "in_review",
+    workflowStage: "in_review",
+    batchId: "batch-kitti-urban-aug",
     title: "Có khả năng tồn tại annotation trùng",
     summary: "Hai box cùng class có vùng overlap bất thường.",
-    explanation: "Các box có hình học gần trùng và cùng thuộc một vùng object lớn.",
-    recommendation: "Kiểm tra object sidebar và xóa annotation thừa nếu là cùng một object.",
+    explanation:
+      "Các box có hình học gần trùng và cùng thuộc một vùng object lớn.",
+    recommendation:
+      "Kiểm tra object sidebar và xóa annotation thừa nếu là cùng một object.",
     evidenceIds: ["evidence-001"],
     createdAt: mockTimestamp,
     updatedAt: mockTimestamp,
@@ -296,7 +319,7 @@ export const mockFindings: Finding[] = [
   {
     id: "finding-005",
     datasetId: "dataset-nuscenes-demo",
-    datasetVersion: "dvc://nuscenes-demo@v0.3",
+    datasetVersion: "nuscenes-demo@v0.3",
     qaRunId: "qa-run-demo-nuscenes-001",
     frameId: "frame-nuscenes-001",
     sceneId: "scene-nuscenes-003",
@@ -307,10 +330,15 @@ export const mockFindings: Finding[] = [
     riskScore: 0.54,
     priority: 7,
     status: "confirmed",
+    workflowStage: "approved",
+    outcome: "false_positive",
+    batchId: "batch-nuscenes-night-aug",
     title: "Prediction class có confidence thấp",
     summary: "Model dự đoán bicycle nhưng nhãn cyclist được reviewer xác nhận.",
-    explanation: "Hình dạng và context phù hợp với cyclist hơn prediction model.",
-    recommendation: "Giữ nguyên nhãn hiện tại và theo dõi pattern này trong báo cáo model.",
+    explanation:
+      "Hình dạng và context phù hợp với cyclist hơn prediction model.",
+    recommendation:
+      "Giữ nguyên nhãn hiện tại và theo dõi pattern này trong báo cáo model.",
     evidenceIds: ["evidence-005"],
     createdAt: mockTimestamp,
     updatedAt: mockTimestamp,
@@ -321,7 +349,7 @@ export const mockFindings: Finding[] = [
   {
     id: "finding-006",
     datasetId: "dataset-kitti-demo",
-    datasetVersion: "dvc://kitti-demo@v1.2",
+    datasetVersion: "kitti-demo@v1.2",
     qaRunId: "qa-run-demo-001",
     frameId: "frame-highway-003",
     sceneId: "scene-highway-002",
@@ -330,10 +358,16 @@ export const mockFindings: Finding[] = [
     riskScore: 0.89,
     priority: 5,
     status: "skipped",
+    workflowStage: "changes_requested",
+    outcome: "skipped",
+    batchId: "batch-kitti-urban-aug",
     title: "Model phát hiện object chưa có nhãn",
-    summary: "Có prediction confidence cao nhưng không tìm thấy annotation tương ứng.",
-    explanation: "Khoảng cách giữa prediction và các annotation hiện tại vượt ngưỡng matching.",
-    recommendation: "Kiểm tra object bị che khuất trước khi thêm annotation mới.",
+    summary:
+      "Có prediction confidence cao nhưng không tìm thấy annotation tương ứng.",
+    explanation:
+      "Khoảng cách giữa prediction và các annotation hiện tại vượt ngưỡng matching.",
+    recommendation:
+      "Kiểm tra object bị che khuất trước khi thêm annotation mới.",
     evidenceIds: ["evidence-006"],
     createdAt: mockTimestamp,
     updatedAt: mockTimestamp,

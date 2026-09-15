@@ -31,14 +31,14 @@
           },
           "labels": {
             "items": {
-              "$ref": "#/components/schemas/RealDatasetLabel"
+              "$ref": "#/components/schemas/RealDatasetLabel-Output"
             },
             "title": "Labels",
             "type": "array"
           },
           "originalLabels": {
             "items": {
-              "$ref": "#/components/schemas/RealDatasetLabel"
+              "$ref": "#/components/schemas/RealDatasetLabel-Output"
             },
             "title": "Originallabels",
             "type": "array"
@@ -238,7 +238,7 @@
           },
           "labels": {
             "items": {
-              "$ref": "#/components/schemas/RealDatasetLabel"
+              "$ref": "#/components/schemas/RealDatasetLabel-Input"
             },
             "maxItems": 5000,
             "title": "Labels",
@@ -1091,8 +1091,112 @@
         "title": "RealDatasetBBox",
         "type": "object"
       },
+      "RealDatasetBatchEvaluation": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "inferenceBatchUsed": {
+            "default": false,
+            "title": "Inferencebatchused",
+            "type": "boolean"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/RealDatasetBatchEvaluationResult"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "succeeded": {
+            "title": "Succeeded",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count",
+          "succeeded",
+          "failed",
+          "results"
+        ],
+        "title": "RealDatasetBatchEvaluation",
+        "type": "object"
+      },
+      "RealDatasetBatchEvaluationRequest": {
+        "properties": {
+          "force": {
+            "default": false,
+            "title": "Force",
+            "type": "boolean"
+          },
+          "imageIds": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Imageids",
+            "type": "array"
+          },
+          "persist": {
+            "default": true,
+            "title": "Persist",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "imageIds"
+        ],
+        "title": "RealDatasetBatchEvaluationRequest",
+        "type": "object"
+      },
+      "RealDatasetBatchEvaluationResult": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "evaluation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RealDatasetEvaluation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "imageId": {
+            "title": "Imageid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "imageId"
+        ],
+        "title": "RealDatasetBatchEvaluationResult",
+        "type": "object"
+      },
       "RealDatasetEvaluation": {
         "properties": {
+          "annotationRevision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Annotationrevision",
+            "type": "integer"
+          },
           "cached": {
             "title": "Cached",
             "type": "boolean"
@@ -1287,6 +1391,14 @@
             "title": "Limit",
             "type": "integer"
           },
+          "normalizedClasses": {
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "title": "Normalizedclasses",
+            "type": "array"
+          },
           "offset": {
             "title": "Offset",
             "type": "integer"
@@ -1311,7 +1423,8 @@
           "limit",
           "offset",
           "availableSplits",
-          "classes"
+          "classes",
+          "normalizedClasses"
         ],
         "title": "RealDatasetFrameSampleList",
         "type": "object"
@@ -1373,7 +1486,7 @@
           },
           "labels": {
             "items": {
-              "$ref": "#/components/schemas/RealDatasetLabel"
+              "$ref": "#/components/schemas/RealDatasetLabel-Output"
             },
             "title": "Labels",
             "type": "array"
@@ -1464,6 +1577,14 @@
             "title": "Limit",
             "type": "integer"
           },
+          "normalizedClasses": {
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "title": "Normalizedclasses",
+            "type": "array"
+          },
           "offset": {
             "title": "Offset",
             "type": "integer"
@@ -1487,12 +1608,13 @@
           "limit",
           "offset",
           "availableSplits",
-          "classes"
+          "classes",
+          "normalizedClasses"
         ],
         "title": "RealDatasetImageList",
         "type": "object"
       },
-      "RealDatasetLabel": {
+      "RealDatasetLabel-Input": {
         "properties": {
           "attributes": {
             "additionalProperties": {
@@ -1541,6 +1663,73 @@
           "id",
           "className",
           "bbox"
+        ],
+        "title": "RealDatasetLabel",
+        "type": "object"
+      },
+      "RealDatasetLabel-Output": {
+        "properties": {
+          "attributes": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "title": "Attributes",
+            "type": "object"
+          },
+          "bbox": {
+            "$ref": "#/components/schemas/RealDatasetBBox"
+          },
+          "className": {
+            "title": "Classname",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "normalizedClassName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Tên class theo taxonomy YOLO/COCO để hiển thị, ``None`` nếu YOLO không có class này.\n\n``class_name`` gốc vẫn là nguồn sự thật cho annotation editor.",
+            "readOnly": true,
+            "title": "Normalizedclassname"
+          },
+          "trackId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trackid"
+          }
+        },
+        "required": [
+          "id",
+          "className",
+          "bbox",
+          "normalizedClassName"
         ],
         "title": "RealDatasetLabel",
         "type": "object"
@@ -1599,13 +1788,26 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "normalizedClassName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Normalizedclassname"
           }
         },
         "required": [
           "id",
           "className",
           "bbox",
-          "confidence"
+          "confidence",
+          "normalizedClassName"
         ],
         "title": "RealDatasetPrediction",
         "type": "object"
@@ -1914,11 +2116,27 @@
           },
           {
             "in": "query",
+            "name": "sequence_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sequence Id"
+            }
+          },
+          {
+            "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
               "default": 8,
-              "maximum": 50,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -1964,6 +2182,80 @@
           }
         ],
         "summary": "List Real Dataset Frame Samples",
+        "tags": [
+          "Real Dataset QA"
+        ]
+      }
+    },
+    "/api/v1/dataset/frame-sequences": {
+      "get": {
+        "operationId": "list_real_dataset_frame_sequences_api_v1_dataset_frame_sequences_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "split",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Split"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dataset",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dataset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response List Real Dataset Frame Sequences Api V1 Dataset Frame Sequences Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Real Dataset Frame Sequences",
         "tags": [
           "Real Dataset QA"
         ]
@@ -2057,6 +2349,63 @@
           }
         ],
         "summary": "List Real Dataset Images",
+        "tags": [
+          "Real Dataset QA"
+        ]
+      }
+    },
+    "/api/v1/dataset/images/{split}/evaluate-batch": {
+      "post": {
+        "operationId": "evaluate_real_dataset_images_batch_api_v1_dataset_images__split__evaluate_batch_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "split",
+            "required": true,
+            "schema": {
+              "title": "Split",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RealDatasetBatchEvaluationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealDatasetBatchEvaluation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Evaluate Real Dataset Images Batch",
         "tags": [
           "Real Dataset QA"
         ]
@@ -2381,6 +2730,22 @@
               "title": "Image Id",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Size"
+            }
           }
         ],
         "responses": {
@@ -2480,6 +2845,62 @@
           }
         ],
         "summary": "Evaluate Real Dataset Image",
+        "tags": [
+          "Real Dataset QA"
+        ]
+      }
+    },
+    "/api/v1/dataset/images/{split}/{image_id}/evaluation": {
+      "get": {
+        "operationId": "get_real_dataset_image_evaluation_api_v1_dataset_images__split___image_id__evaluation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "split",
+            "required": true,
+            "schema": {
+              "title": "Split",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "image_id",
+            "required": true,
+            "schema": {
+              "title": "Image Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealDatasetEvaluation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Real Dataset Image Evaluation",
         "tags": [
           "Real Dataset QA"
         ]

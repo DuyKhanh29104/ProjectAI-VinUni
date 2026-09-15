@@ -1,6 +1,7 @@
 import { isApiDataSourceEnabled } from "../../api/labelGuardianApi";
 import { ApiQAQueueView } from "./ApiQAQueueView";
-import { MockQAQueueView } from "./MockQAQueueView";
+import { MockCaseRegistryView } from "./MockCaseRegistryView";
+import "../../styles/case-registry-v2.css";
 
 export function QACasesView({
   onOpenFinding,
@@ -14,7 +15,7 @@ export function QACasesView({
       onOpenEditor={(split, imageId) => onOpenEditor?.(split, imageId)}
     />
   ) : (
-    <MockQAQueueView
+    <MockCaseRegistryView
       onOpenFinding={onOpenFinding}
       onOpenEditor={onOpenEditor}
     />

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, CheckConstraint, DateTime, Index, String, UniqueConstraint
+from sqlalchemy import JSON, CheckConstraint, DateTime, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.db.base import Base
@@ -17,6 +17,7 @@ class QaEvaluation(Base):
             "split",
             "image_id",
             "model_name",
+            "annotation_revision",
             name="uq_qa_evaluation_identity",
         ),
         Index("ix_qa_evaluations_dataset_split", "dataset_id", "split"),
@@ -28,8 +29,10 @@ class QaEvaluation(Base):
     split: Mapped[str] = mapped_column(String(64), index=True)
     image_id: Mapped[str] = mapped_column(String(255), index=True)
     model_name: Mapped[str] = mapped_column(String(255))
+    annotation_revision: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     status: Mapped[str] = mapped_column(String(32), index=True)
     metrics_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    report_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     predictions_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
     matches_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
     unmatched_ground_truth_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)

@@ -1,4 +1,59 @@
-import type { ModelConfig, QaRun, ReportMetrics, RuleConfig, User } from "../../domain/types.ts";
+import type {
+  FeedbackComment,
+  ModelConfig,
+  QaRun,
+  ReportMetrics,
+  RuleConfig,
+  User,
+  WorkBatch,
+} from "../../domain/types.ts";
+
+export const mockBatches: WorkBatch[] = [
+  {
+    id: "batch-kitti-urban-aug",
+    datasetId: "dataset-kitti-demo",
+    name: "Urban traffic · August",
+    customerName: "Mobility Lab",
+    state: "review",
+    frameCount: 480,
+    assignedCount: 480,
+    submittedCount: 436,
+    approvedCount: 392,
+    ownerId: "user-reviewer",
+    dueAt: "2026-08-30T10:00:00.000Z",
+    createdAt: "2026-08-20T09:00:00.000Z",
+  },
+  {
+    id: "batch-nuscenes-night-aug",
+    datasetId: "dataset-nuscenes-demo",
+    name: "Night scenes · Calibration",
+    customerName: "Perception Research",
+    state: "active",
+    frameCount: 220,
+    assignedCount: 180,
+    submittedCount: 94,
+    approvedCount: 62,
+    ownerId: "user-reviewer",
+    dueAt: "2026-09-02T10:00:00.000Z",
+    createdAt: "2026-08-23T09:00:00.000Z",
+  },
+];
+
+export const mockFeedbackComments: FeedbackComment[] = [
+  {
+    id: "comment-001",
+    findingId: "finding-006",
+    authorId: "user-reviewer",
+    targetType: "frame",
+    targetId: "frame-highway-003",
+    reasonCategory: "missing_label",
+    body: "Kiểm tra vùng khuất bên phải và bổ sung object nếu xuất hiện ở hai frame liền kề.",
+    blocking: true,
+    resolved: false,
+    annotationRevision: 1,
+    createdAt: "2026-08-25T08:40:00.000Z",
+  },
+];
 
 export const mockUsers: User[] = [
   {
@@ -55,7 +110,8 @@ export const mockRules: RuleConfig[] = [
     id: "rule-box-iou",
     name: "Box alignment / IoU",
     category: "geometry",
-    description: "Gắn cờ khi IoU giữa annotation và prediction thấp hơn ngưỡng.",
+    description:
+      "Gắn cờ khi IoU giữa annotation và prediction thấp hơn ngưỡng.",
     enabled: true,
     threshold: 0.5,
     unit: "IoU tối thiểu",
@@ -67,7 +123,8 @@ export const mockRules: RuleConfig[] = [
     id: "rule-track-gap",
     name: "Track continuity gap",
     category: "temporal",
-    description: "Phát hiện track bị đứt khi khoảng cách frame vượt quá ngưỡng.",
+    description:
+      "Phát hiện track bị đứt khi khoảng cách frame vượt quá ngưỡng.",
     enabled: true,
     threshold: 2,
     unit: "frame tối đa",

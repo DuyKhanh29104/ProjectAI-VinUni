@@ -1,0 +1,869 @@
+/* Product-wide visual system. Landing keeps its own editorial layer. */
+.app-shell-dark,
+.mock-login-screen,
+.label-editor-shell {
+  color: var(--color-text);
+  background: var(--color-canvas);
+}
+
+/* Custom Browser Surfaces & Carets */
+.app-shell-dark ::selection,
+.mock-login-screen ::selection,
+.label-editor-shell ::selection {
+  background: var(--color-surface-3);
+  color: var(--color-brand);
+}
+
+.app-shell-dark :is(input, textarea),
+.mock-login-screen :is(input, textarea),
+.label-editor-shell :is(input, textarea) {
+  caret-color: var(--color-brand);
+}
+
+/* Custom Scrollbars */
+.app-shell-dark ::-webkit-scrollbar,
+.label-editor-shell ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.app-shell-dark ::-webkit-scrollbar-track,
+.label-editor-shell ::-webkit-scrollbar-track {
+  background: var(--color-canvas);
+}
+
+.app-shell-dark ::-webkit-scrollbar-thumb,
+.label-editor-shell ::-webkit-scrollbar-thumb {
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-3);
+}
+
+.app-shell-dark ::-webkit-scrollbar-thumb:hover,
+.label-editor-shell ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-line-strong);
+}
+
+.app-shell-dark :is(button, input, select, textarea),
+.mock-login-screen :is(button, input, select, textarea),
+.label-editor-shell :is(button, input, select, textarea) {
+  font-family: inherit;
+}
+
+.app-shell-dark :is(button, a, input, select, textarea):focus-visible,
+.mock-login-screen :is(button, a, input, select):focus-visible,
+.label-editor-shell :is(button, a, input, select, textarea):focus-visible {
+  outline: 1px solid var(--color-brand);
+  outline-offset: 2px;
+  box-shadow: var(--shadow-focus);
+}
+
+.app-shell-dark :is(strong, h1, h2, h3),
+.mock-login-screen :is(strong, h1, h2),
+.label-editor-shell :is(strong, h1, h2, h3) {
+  color: var(--color-text-strong);
+}
+
+.app-shell-dark :is(.qa-metric-strip, .stat-card, .queue-kpi-card) strong,
+.app-shell-dark
+  :is(.qa-findings-table, .queue-console-table, .annotator-report-table),
+.label-editor-shell :is(.editor-frame-counter, .object-index) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Shell */
+.app-shell-dark .app-topbar {
+  z-index: var(--z-topbar);
+  min-height: 58px;
+  padding: 9px 18px 9px 82px;
+  border-bottom: 1px solid var(--color-line);
+  background: rgba(9, 13, 16, 0.92);
+  backdrop-filter: blur(14px);
+}
+
+.app-shell-dark .topbar-context {
+  gap: 2px;
+}
+
+.app-shell-dark .topbar-context .eyebrow {
+  color: var(--color-text-faint);
+}
+
+.app-shell-dark .topbar-context strong {
+  color: var(--color-text-strong);
+  font-size: var(--text-md);
+  font-weight: 680;
+}
+
+.app-shell-dark .topbar-actions {
+  gap: var(--space-2);
+}
+
+.app-shell-dark .workspace-home-link,
+.app-shell-dark :is(.dataset-switcher, .role-switcher, .topbar-run-status) {
+  min-height: 34px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  background: var(--color-surface-1);
+}
+
+.app-shell-dark .workspace-home-link {
+  gap: 7px;
+  padding-inline: 10px;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    background var(--duration-fast) var(--ease-standard);
+}
+
+.app-shell-dark .workspace-home-link:hover {
+  border-color: var(--color-brand-line);
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.app-shell-dark :is(.dataset-switcher, .role-switcher) select {
+  min-height: 32px;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: transparent;
+}
+
+.app-shell-dark .topbar-notification,
+.app-shell-dark .account-trigger {
+  min-height: 34px;
+  border-radius: var(--radius-md);
+}
+
+.app-shell-dark .account-trigger:hover,
+.app-shell-dark .account-trigger[aria-expanded="true"] {
+  border-color: var(--color-line-strong);
+  background: var(--color-surface-2);
+}
+
+.app-shell-dark .avatar {
+  color: var(--color-canvas);
+  background: var(--color-brand);
+}
+
+.app-shell-dark .account-trigger-copy strong {
+  color: var(--color-text-strong);
+}
+
+.app-shell-dark .account-trigger-copy small {
+  color: var(--color-text-muted);
+}
+
+.app-shell-dark .account-popover {
+  z-index: var(--z-popover);
+  border-color: var(--color-line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  box-shadow: var(--shadow-float);
+}
+
+.app-shell-dark .sidebar {
+  z-index: var(--z-sidebar);
+  width: 68px;
+  padding: 16px 8px 12px;
+  border-color: var(--color-line);
+  background: rgba(13, 20, 24, 0.96);
+  backdrop-filter: blur(14px);
+  transition: box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.app-shell-dark .sidebar:hover {
+  width: 220px;
+  box-shadow: 12px 0 34px rgba(0, 0, 0, 0.28);
+}
+
+.app-shell-dark .brand-mark {
+  border-color: var(--color-brand-line);
+  border-radius: var(--radius-md);
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.app-shell-dark .sidebar-nav-item {
+  min-height: 38px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.app-shell-dark .sidebar-nav-item:hover {
+  color: var(--color-text-strong);
+  background: var(--color-surface-2);
+}
+
+.app-shell-dark .sidebar-nav-item.is-active {
+  border-color: var(--color-brand-line);
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.app-shell-dark .nav-count {
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.app-shell-dark .workspace-main {
+  background: var(--color-canvas);
+}
+
+/* Global controls and surfaces */
+.app-shell-dark .view-page,
+.app-shell-dark .queue-console-page {
+  width: min(1540px, calc(100% - 40px));
+  padding: 24px 0 48px;
+}
+
+.app-shell-dark
+  :is(
+    .page-heading h1,
+    .view-page > h1,
+    .qa-cases-page-heading h1,
+    .case-heading h1
+  ) {
+  margin: 4px 0 5px;
+  color: var(--color-text-strong);
+  font-size: var(--text-display);
+  font-weight: 660;
+  letter-spacing: 0;
+  line-height: 1.12;
+}
+
+.app-shell-dark :is(.page-description, .qa-cases-page-heading p) {
+  max-width: 720px;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+
+.app-shell-dark .eyebrow,
+.app-shell-dark .qa-cases-page-heading > div > span {
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+  font-weight: 720;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.app-shell-dark .card,
+.app-shell-dark .stat-card,
+.app-shell-dark
+  :is(
+    .queue-console-filter-panel,
+    .queue-console-viewer-card,
+    .queue-console-detail-panel,
+    .case-risk-summary,
+    .case-metadata-strip
+  ) {
+  border-color: var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+  box-shadow: none;
+}
+
+.app-shell-dark .card:hover,
+.app-shell-dark .stat-card:hover {
+  border-color: var(--color-line-strong);
+  box-shadow: none;
+  transform: none;
+}
+
+.app-shell-dark .button {
+  min-height: 34px;
+  border-radius: var(--radius-md);
+  font-weight: 680;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard);
+}
+
+.app-shell-dark .button-primary {
+  border-color: var(--color-brand);
+  color: var(--color-canvas);
+  background: var(--color-brand);
+}
+
+.app-shell-dark .button-primary:hover {
+  border-color: var(--color-brand-hover);
+  color: var(--color-text-strong);
+  background: var(--color-brand-hover);
+}
+
+.app-shell-dark .button-secondary {
+  border-color: var(--color-line-strong);
+  color: var(--color-text);
+  background: var(--color-surface-2);
+}
+
+.app-shell-dark .button-secondary:hover,
+.app-shell-dark .button-ghost:hover {
+  border-color: var(--color-brand-line);
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.app-shell-dark .button-danger {
+  border-color: rgba(217, 112, 122, 0.28);
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.app-shell-dark .badge {
+  min-height: 20px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 680;
+}
+
+.app-shell-dark :is(.badge-info, .badge-neutral, .badge-low) {
+  border-color: var(--color-line-strong);
+  color: var(--color-info);
+  background: var(--color-info-soft);
+}
+
+.app-shell-dark .badge-success {
+  border-color: rgba(99, 183, 143, 0.24);
+  color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+.app-shell-dark .badge-medium {
+  border-color: rgba(210, 163, 93, 0.24);
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+}
+
+.app-shell-dark :is(.badge-high, .badge-critical) {
+  border-color: rgba(217, 112, 122, 0.26);
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.app-shell-dark :is(input, select, textarea),
+.app-shell-dark :is(.queue-global-search, .login-input-shell) {
+  border-color: var(--color-line-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: var(--color-surface-2);
+}
+
+.app-shell-dark :is(input, textarea)::placeholder {
+  color: var(--color-text-faint);
+}
+
+.app-shell-dark .progress-track {
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--color-surface-3);
+}
+
+.app-shell-dark :is(.progress-blue, .progress-purple) {
+  background: var(--color-brand);
+}
+
+.app-shell-dark .selected-text {
+  color: var(--color-brand);
+}
+
+/* Overview and analytics */
+.app-shell-dark :is(.qa-dataset-bar, .qa-metric-strip) {
+  border-color: var(--color-line);
+  background: var(--color-surface-1);
+}
+
+.app-shell-dark :is(.qa-dataset-bar, .qa-metric-strip) > div {
+  border-color: var(--color-line);
+}
+
+.app-shell-dark .metric-icon,
+.app-shell-dark .qa-dataset-identity > span {
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  background: var(--color-surface-3);
+}
+
+.app-shell-dark .qa-score-metric strong,
+.app-shell-dark .qa-dataset-identity > span {
+  color: var(--color-brand);
+  background-color: var(--color-brand-soft);
+}
+
+.app-shell-dark
+  :is(.qa-findings-table > button, .qa-priority-list button):hover {
+  background: var(--color-surface-2);
+}
+
+.app-shell-dark .qa-findings-table > button,
+.app-shell-dark .qa-priority-list button {
+  border-color: var(--color-line);
+}
+
+/* QA queue and cases */
+.queue-dataset-selector {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-2);
+  margin-right: var(--space-2);
+}
+
+.app-shell-dark .queue-dataset-selector select {
+  min-height: 36px;
+  padding: 0 30px 0 10px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: var(--color-surface-2);
+}
+
+.app-shell-dark .queue-frame-scope,
+.app-shell-dark .api-inline-warning,
+.app-shell-dark .agent-safety-chip {
+  border-color: var(--color-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+}
+
+.app-shell-dark .queue-kpi-card {
+  min-height: 82px;
+  border-color: var(--color-line);
+  background: var(--color-surface-1);
+}
+
+.app-shell-dark .queue-kpi-card > i {
+  border-color: var(--color-line);
+  border-radius: var(--radius-md);
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.app-shell-dark
+  :is(
+    .queue-viewer-heading,
+    .queue-viewer-toolbar,
+    .queue-viewer-timeline,
+    .queue-table-titlebar,
+    .queue-table-pagination,
+    .queue-panel-heading
+  ) {
+  border-color: var(--color-line);
+  background: var(--color-canvas-subtle);
+}
+
+.app-shell-dark
+  :is(.queue-comparison-viewer, .queue-viewer-stage, .frame-stage-shell) {
+  background: #070a0c;
+}
+
+.app-shell-dark .queue-agent-explanation {
+  border-color: var(--color-brand-line);
+  color: var(--color-text);
+  background: var(--color-canvas-subtle);
+}
+
+.app-shell-dark .queue-agent-explanation > div > span {
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.app-shell-dark .queue-console-table th {
+  border-color: var(--color-line);
+  color: var(--color-text-faint);
+  background: var(--color-canvas-subtle);
+}
+
+.app-shell-dark .queue-console-table td {
+  border-color: var(--color-line);
+  color: var(--color-text-muted);
+}
+
+.app-shell-dark .queue-console-table tbody tr:hover {
+  background: var(--color-surface-2);
+}
+
+.app-shell-dark .queue-console-table tbody tr.is-selected {
+  background: var(--color-brand-soft);
+}
+
+.app-shell-dark .queue-row-action,
+.app-shell-dark .queue-table-pagination button.is-current {
+  border-color: var(--color-brand-line);
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+/* Case review and supporting pages */
+.app-shell-dark
+  :is(
+    .frame-viewer,
+    .sequence-timeline,
+    .agent-findings-panel,
+    .review-actions-card,
+    .pipeline-stage-card,
+    .pipeline-events-card,
+    .pipeline-log-card
+  ) {
+  border-color: var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+}
+
+.app-shell-dark
+  :is(
+    .frame-viewer-toolbar,
+    .frame-viewer-legend,
+    .sequence-header,
+    .case-metadata-strip > div,
+    .history-row,
+    .annotation-layer-lineage > div,
+    .config-row,
+    .model-config-row,
+    .dataset-scene-row,
+    .pipeline-stage-row,
+    .pipeline-event-row
+  ) {
+  border-color: var(--color-line);
+}
+
+.app-shell-dark
+  :is(
+    .timeline-frame,
+    .annotation-preview-card,
+    .annotation-preview-pane,
+    .history-row,
+    .before-after-card
+  ) {
+  border-color: var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+.app-shell-dark
+  :is(.proposal-feedback-callout, .agent-recommendation, .pipeline-notice) {
+  border-color: rgba(210, 163, 93, 0.24);
+  background: var(--color-warning-soft);
+}
+
+.app-shell-dark
+  :is(
+    .dataset-context-card,
+    .privacy-safe-card,
+    .report-export-card,
+    .report-method-card,
+    .qa-run-progress-card,
+    .qa-run-config-card,
+    .dataset-scene-card,
+    .settings-grid > .card,
+    .reports-grid > .card
+  ) {
+  border-color: var(--color-line);
+  background: var(--color-surface-1);
+}
+
+.app-shell-dark .privacy-safe-card {
+  border-left: 2px solid var(--color-success);
+}
+
+.app-shell-dark .pipeline-flow-marker {
+  border-color: var(--color-brand-line);
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.app-shell-dark .pipeline-log-console {
+  border-color: var(--color-line);
+  color: var(--color-success);
+  background: #070a0c;
+  font-family: var(--font-mono);
+}
+
+.app-shell-dark
+  :is(
+    .report-bar-row,
+    .severity-report-row,
+    .annotator-report-row,
+    .report-risk-row
+  ) {
+  border-color: var(--color-line);
+}
+
+/* Authentication */
+.mock-login-screen {
+  --auth-bg: var(--color-canvas);
+  --auth-panel: var(--color-canvas-subtle);
+  --auth-input: var(--color-surface-1);
+  --auth-line: var(--color-line-strong);
+  --auth-text: var(--color-text-strong);
+  --auth-muted: var(--color-text-muted);
+  --auth-accent: var(--color-brand);
+  background:
+    linear-gradient(rgba(9, 13, 16, 0.72), rgba(9, 13, 16, 0.92)),
+    var(--auth-background-image) center / cover fixed no-repeat,
+    var(--color-canvas);
+}
+
+.mock-login-card {
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-canvas-subtle);
+  box-shadow: var(--shadow-float);
+}
+
+.mock-login-brand {
+  color: inherit;
+  text-decoration: none;
+}
+
+.mock-login-brand:hover .login-brand-name {
+  color: var(--color-brand);
+}
+
+.login-brand-mark,
+.mock-login-screen .login-checkbox {
+  border-color: var(--color-brand-line);
+  border-radius: var(--radius-md);
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.mock-login-card h1 {
+  font-size: 46px;
+  letter-spacing: 0;
+}
+
+.login-input-shell {
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+}
+
+.login-input-shell:focus-within {
+  border-color: var(--color-brand);
+  box-shadow: var(--shadow-focus);
+}
+
+.login-button {
+  border-radius: var(--radius-md);
+}
+
+.login-button-primary {
+  color: var(--color-canvas);
+  background: var(--color-brand);
+}
+
+.login-button-primary:hover {
+  background: var(--color-brand-hover);
+}
+
+.login-visual-overlay {
+  background: linear-gradient(
+    90deg,
+    rgba(9, 13, 16, 0.2),
+    rgba(9, 13, 16, 0.72)
+  );
+}
+
+/* Editor stays dark and neutral so annotation colors retain meaning. */
+.label-editor-shell {
+  --editor-brand: var(--color-brand);
+  --editor-surface: var(--color-surface-1);
+  --editor-surface-raised: var(--color-surface-2);
+  --editor-line: var(--color-line);
+  color: var(--color-text);
+}
+
+.label-editor-shell
+  :is(
+    .editor-topbar,
+    .editor-left-sidebar,
+    .editor-properties-panel,
+    .editor-agent-suggestions-panel,
+    .editor-camera-strip,
+    .editor-timeline
+  ) {
+  border-color: var(--color-line);
+  background: var(--color-canvas-subtle);
+}
+
+.label-editor-shell
+  :is(
+    .editor-tool-list button,
+    .editor-top-actions button,
+    .editor-canvas-toolbar button,
+    .editor-zoom-controls button,
+    .editor-playback-controls button,
+    .editor-toggle-row,
+    .editor-save-note-section
+  ) {
+  border-color: var(--color-line);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  background: var(--color-surface-1);
+}
+
+.label-editor-shell
+  :is(
+    .editor-tool-list button,
+    .editor-top-actions button,
+    .editor-canvas-toolbar button,
+    .editor-zoom-controls button,
+    .editor-playback-controls button
+  ):hover {
+  border-color: var(--color-line-strong);
+  color: var(--color-text-strong);
+  background: var(--color-surface-2);
+}
+
+.label-editor-shell .editor-save-button,
+.label-editor-shell .editor-next-button,
+.label-editor-shell .editor-cases-button {
+  border-color: var(--color-brand-line);
+  color: var(--color-canvas);
+  background: var(--color-brand);
+}
+
+.label-editor-shell
+  :is(
+    .editor-object-list,
+    .editor-properties-content,
+    .editor-agent-suggestions-list
+  ) {
+  scrollbar-color: var(--color-surface-3) var(--color-canvas-subtle);
+}
+
+@media (max-width: 1050px) {
+  .app-shell-dark .app-topbar {
+    padding-inline: 76px 14px;
+  }
+
+  .app-shell-dark .workspace-home-link span,
+  .app-shell-dark .topbar-context .eyebrow,
+  .app-shell-dark .account-trigger-copy {
+    display: none;
+  }
+
+  .app-shell-dark
+    :is(
+      .page-heading h1,
+      .view-page > h1,
+      .qa-cases-page-heading h1,
+      .case-heading h1
+    ) {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 700px) {
+  .app-shell-dark .app-topbar {
+    min-height: 54px;
+    padding: 8px 10px;
+  }
+
+  .app-shell-dark .topbar-mobile-brand {
+    display: flex;
+  }
+
+  .app-shell-dark .topbar-context,
+  .app-shell-dark :is(.dataset-switcher, .topbar-run-status, .role-switcher) {
+    display: none;
+  }
+
+  .app-shell-dark .sidebar {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 58px;
+    padding: 6px 8px;
+    border-top: 1px solid var(--color-line-strong);
+    border-right: 0;
+  }
+
+  .app-shell-dark .sidebar:hover {
+    width: 100%;
+    padding: 6px 8px;
+    box-shadow: none;
+  }
+
+  .app-shell-dark .sidebar-brand,
+  .app-shell-dark .sidebar-spacer {
+    display: none;
+  }
+
+  .app-shell-dark .sidebar-nav {
+    display: grid;
+    height: 100%;
+    grid-template-columns: repeat(7, minmax(42px, 1fr));
+    gap: 2px;
+  }
+
+  .app-shell-dark .sidebar-nav-item,
+  .app-shell-dark .sidebar:hover .sidebar-nav-item {
+    min-height: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .app-shell-dark .sidebar-nav-icon {
+    position: static;
+  }
+
+  .app-shell-dark .sidebar-nav-item > span:nth-child(2),
+  .app-shell-dark .nav-count {
+    display: none;
+  }
+
+  .app-shell-dark .workspace-main {
+    margin-left: 0;
+    padding-bottom: 58px;
+  }
+
+  .app-shell-dark .view-page,
+  .app-shell-dark .queue-console-page {
+    width: calc(100% - 24px);
+    padding-top: 18px;
+  }
+
+  .app-shell-dark
+    :is(
+      .page-heading h1,
+      .view-page > h1,
+      .qa-cases-page-heading h1,
+      .case-heading h1
+    ) {
+    font-size: 25px;
+  }
+
+  .queue-dataset-selector {
+    width: 100%;
+    margin-right: 0;
+  }
+
+  .app-shell-dark .queue-dataset-selector select {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .mock-login-card h1 {
+    font-size: 38px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell-dark *,
+  .mock-login-screen *,
+  .label-editor-shell * {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

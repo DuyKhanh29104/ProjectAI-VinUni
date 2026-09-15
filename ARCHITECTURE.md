@@ -1,433 +1,408 @@
-# Architecture Document — Label Guardian
+# Architecture — Label Guardian
 
-> Cập nhật: 2026-08-20
-> Phạm vi: kiến trúc tổng thể của source code hiện có và hướng mở rộng đã thống nhất.
+> Cập nhật: 2026-08-27
+> Phạm vi: kiến trúc đang tồn tại trong source code, migration và cấu hình triển khai hiện tại.
 
-Tài liệu này là điểm bắt đầu để thành viên mới hiểu hệ thống. Mỗi phần phân biệt rõ:
+Tài liệu này được lấy từ bản `ARCHITECTURE.md` trên nhánh `main` và viết lại theo phiên bản hiện tại của dự án. Khi tài liệu và hệ thống khác nhau, thứ tự nguồn chuẩn là:
 
-- **Hiện tại:** đã có trong source code và có thể chạy hoặc kiểm thử.
-- **Mục tiêu:** kiến trúc dự kiến, chưa được xem là tính năng đã triển khai.
+1. Alembic migrations và ORM models cho schema dữ liệu.
+2. `docs/openapi.json` và FastAPI routes cho API contract.
+3. Source code frontend/backend cho hành vi runtime.
+4. Cấu hình Vercel, Docker Compose, Caddy và GitHub Actions cho deployment.
 
-Khi tài liệu và code khác nhau, source code, migration và OpenAPI là nguồn mô tả hành vi đang chạy. Roadmap chi tiết nằm trong [`docs/LABEL_GUARDIAN_IMPLEMENTATION_PLAN.md`](docs/LABEL_GUARDIAN_IMPLEMENTATION_PLAN.md).
+Các ý tưởng chưa có trong code phải được ghi rõ là roadmap, không được mô tả như tính năng production.
 
-## System Overview
+## 1. Tổng quan hệ thống
 
-Label Guardian là hệ thống hỗ trợ QA cho annotation camera 2D trong dữ liệu perception. Hệ thống đưa các trường hợp đáng ngờ vào hàng đợi theo mức rủi ro, trình bày evidence để con người review và mở đúng CVAT Task/Job/Frame khi cần chỉnh annotation chuyên sâu.
+Label Guardian là nền tảng QA và chỉnh sửa annotation camera 2D cho dữ liệu perception. Hệ thống ingest dữ liệu KITTI/nuScenes, dùng model và rule deterministic để phát hiện annotation đáng ngờ, đưa finding vào QA workflow và cho phép người dùng sửa nhãn trong 2D Editor tích hợp.
 
-Ranh giới trách nhiệm cốt lõi:
+Các ranh giới chính:
 
-| Thành phần | Trách nhiệm | Không chịu trách nhiệm |
-|---|---|---|
-| Dashboard | QA Queue, lọc/xếp hạng, viewer so sánh, evidence và thao tác review | Chỉnh geometry annotation chuyên sâu hoặc giữ CVAT PAT |
-| CVAT | Hiển thị và chỉnh box, class, track, sequence | Tính risk, quyết định review hoặc quản lý dataset version |
-| Backend | API, persistence, kiểm tra mapping, proxy CVAT và điều phối workflow | Tự quyết định thay con người |
-| Rule/model pipeline | Trong kiến trúc mục tiêu: sinh prediction, finding và evidence có provenance | Ghi đè Ground Truth |
-| Agent | Trong kiến trúc mục tiêu: tổng hợp evidence, giải thích và đề xuất | Sửa CVAT, sync, restore, approve hoặc thay đổi risk |
-| Reviewer/Annotator | Ra quyết định và chỉnh annotation theo quyền | Chia sẻ PAT cho frontend |
+| Thành phần | Trách nhiệm hiện tại |
+| --- | --- |
+| React frontend | Landing page, đăng nhập, dashboard, QA Queue, QA Cases, 2D Editor, reports, dataset và pipeline views |
+| Supabase Auth | Identity, password, email confirmation, access/refresh session |
+| FastAPI | Xác minh token, RBAC, dataset API, private asset streaming, Agent evaluation, QA workflow và annotation revisions |
+| Supabase PostgreSQL | User profile/role, dataset metadata, provenance, evaluation, case, audit và revision |
+| Google Cloud Storage | Ảnh, point cloud, raw/canonical dataset và ingestion artifacts |
+| Label QA Agent | YOLO inference, matching, metrics, deterministic flagging và explanation tùy chọn |
+| GCP Batch ingestion | Tải/chuẩn hóa/publish dataset lớn ngoài request path của API |
 
-Baseline hiện tại phục vụ hai cách chạy:
+CVAT không còn nằm trong runtime hiện tại. Migration `20260822_0002` đã thay tích hợp CVAT bằng 2D Editor có revision và xóa mapping/schema CVAT cũ.
 
-1. **Mock mode:** toàn bộ Dashboard chạy độc lập bằng dữ liệu và state giả lập trong browser.
-2. **API mode:** riêng QA Queue đọc QA Case, frame, annotation và deep-link CVAT qua FastAPI; các màn hình còn lại vẫn dùng mock state.
-
-## Architecture Diagram
-
-### Kiến trúc đang chạy
+## 2. Sơ đồ kiến trúc đang chạy
 
 ```mermaid
 flowchart LR
-    subgraph Browser[Browser — React 19 + Vite]
-        SHELL[App shell và React Router]
-        QUEUE[QA Queue]
-        VIEWS[Overview / Reports / Dataset Run / Settings]
-        MOCK[(Mock data + localStorage)]
+    USER[Reviewer / Annotator / Admin]
+
+    subgraph Browser[Browser]
+        WEB[React 19 + Vite]
+        QUERY[TanStack Query]
+        MOCK[Mock repository + localStorage]
     end
 
-    subgraph Backend[FastAPI modular monolith]
-        API[API routes]
-        QAS[QA Case service]
-        CVS[CVAT service + normalizer]
-        REPO[Repositories]
+    AUTH[Supabase Auth]
+    VERCEL[Vercel CDN / SPA]
+
+    subgraph VM[GCP VM]
+        CADDY[Caddy HTTPS proxy]
+        API[FastAPI modular monolith]
+        AGENT[LangGraph + YOLO + rules]
+        CACHE[Local dataset cache]
     end
 
-    DB[(PostgreSQL 16\napplication schema)]
-    CVAT[CVAT Online hoặc self-hosted]
-    FIXTURE[Fixture synthetic\n2 sequences / 12 frames]
+    DB[(Supabase PostgreSQL)]
+    GCS[(Private GCS bucket)]
+    BATCH[GCP Batch ingestion worker]
 
-    SHELL --> QUEUE
-    SHELL --> VIEWS
-    QUEUE -->|VITE_DATA_SOURCE=mock| MOCK
-    VIEWS --> MOCK
-    QUEUE -->|VITE_DATA_SOURCE=api\nGET /api/*| API
-    API --> QAS
-    API --> CVS
-    QAS --> REPO
-    REPO --> DB
-    CVS -->|Bearer PAT backend-only| CVAT
-    FIXTURE -->|generate / provision / seed| CVAT
-    FIXTURE -->|seed QA cases| DB
+    USER --> VERCEL --> WEB
+    WEB <--> AUTH
+    WEB --> QUERY
+    QUERY -->|Bearer token /api/v1| CADDY --> API
+    WEB -->|mock mode| MOCK
+    API --> DB
+    API --> GCS
+    API --> CACHE
+    API --> AGENT
+    BATCH --> GCS
+    BATCH --> DB
 ```
 
-### Kiến trúc mục tiêu
-
-```mermaid
-flowchart LR
-    RAW[Raw KITTI / nuScenes] --> ING[Ingestion]
-    ING --> PRIV[Anonymization]
-    PRIV --> STORE[DVC + MinIO]
-    PRIV --> CVAT[CVAT]
-    STORE --> INF[YOLOX-s + ByteTrack]
-    INF --> RULES[Rule Engine]
-    RULES --> EVIDENCE[Evidence có provenance]
-    EVIDENCE --> RISK[Deterministic Risk]
-    EVIDENCE --> AGENT[LangGraph Agent]
-    RISK --> API[FastAPI /api/v1]
-    AGENT --> API
-    CVAT <--> API
-    API <--> UI[React Dashboard]
-    API --> DB[(PostgreSQL)]
-    API --> WORKERS[Celery workers]
-    WORKERS --> REDIS[(Redis)]
-    WORKERS --> STORE
-```
-
-Sơ đồ mục tiêu không đồng nghĩa các thành phần Redis, MinIO, DVC remote, Keycloak, inference, rule engine và Agent production đã tồn tại. PostgreSQL đã là persistence runtime hiện tại, nhưng HA, least-privileged roles và vận hành production vẫn là mục tiêu tiếp theo.
-
-## Components
-
-### 1. Frontend — React 19, TypeScript và Vite
-
-- **Purpose:** cung cấp Dashboard QA, hiển thị hàng đợi và evidence, hỗ trợ Human-in-the-loop và điều hướng người dùng sang CVAT.
-- **Entrypoint:** `frontend/src/main.tsx` và `frontend/src/App.tsx`.
-- **Navigation:** React Router với clean URL, ví dụ `/qa-queue` và `/cases/{findingId}`; production host cần SPA fallback về `index.html`.
-- **State hiện tại:** `MockDataProvider` và `MockRepository`; demo state được lưu trong `localStorage`.
-- **Data boundary:** UI phụ thuộc vào domain types/repository contract thay vì đọc trực tiếp một file mock duy nhất.
-- **Styling:** custom CSS được tách theo shell, view, queue, review workspace và UI state.
-
-Các lớp chính:
-
-| Khu vực | Vị trí | Vai trò |
-|---|---|---|
-| App shell và views | `frontend/src/App.tsx`, `frontend/src/views/` | Điều hướng và các màn hình nghiệp vụ |
-| Domain | `frontend/src/domain/` | Type, permission và logic lọc/sắp xếp dùng chung |
-| Mock data | `frontend/src/data/mock/` | Catalog, review data và workflow seed |
-| State/repository | `frontend/src/state/` | Contract, mock operations và API adapter dự phòng |
-| QA Queue | `frontend/src/features/qa-queue/` | Chọn mock/API view, viewer, analytics và presentation |
-| API client | `frontend/src/api/` | DTO và các GET request tới FastAPI |
-| UI components | `frontend/src/components/` | Viewer, evidence, review, CVAT context và primitives |
-
-`VITE_DATA_SOURCE` quyết định implementation của QA Queue:
-
-- `mock`: dùng `MockQAQueueView`; không tạo URL CVAT giả.
-- `api`: dùng `ApiQAQueueView`; URL CVAT chỉ được hiển thị sau khi backend kiểm tra mapping và trả về.
-
-Hiện tại API mode mới hỗ trợ đường đọc. Các nút xác nhận, bác bỏ và đồng bộ bị khóa vì backend chưa có Review Decision/Sync command API.
-
-### 2. Backend — FastAPI
-
-- **Purpose:** cung cấp REST API, đọc QA Case từ database, kết nối CVAT bằng credential backend-only và chuẩn hóa lỗi/upstream data.
-- **Entrypoint:** `src/main.py`, hỗ trợ app factory để inject settings, HTTP transport và DB session trong test.
-- **API assembly:** `src/api/routes.py`; route nghiệp vụ nằm trong `src/api/cvat.py` và `src/api/qa_cases.py`.
-- **Validation:** Pydantic/Pydantic Settings cho config và response DTO.
-- **Persistence:** SQLAlchemy async qua service/repository layers.
-- **Networking:** một `httpx.AsyncClient` được quản lý theo FastAPI lifespan; không follow redirect.
-
-Luồng phụ thuộc backend:
-
-```mermaid
-flowchart LR
-    ROUTE[FastAPI route] --> SERVICE[Service]
-    SERVICE --> REPOSITORY[Repository]
-    REPOSITORY --> SESSION[Async SQLAlchemy session]
-    SESSION --> DB[(PostgreSQL)]
-    SERVICE -->|khi cần dữ liệu CVAT| CVATSERVICE[CVAT Service]
-    CVATSERVICE --> NORMALIZER[Annotation normalizer]
-    CVATSERVICE --> CVAT[CVAT REST API]
-```
-
-API baseline hiện có:
-
-| Method | Endpoint | Chức năng |
-|---|---|---|
-| GET | `/health`, `/api/health` | Health của FastAPI |
-| GET | `/api/cvat/health` | Kiểm tra kết nối và credential CVAT |
-| GET | `/api/cvat/tasks` | Liệt kê CVAT Task |
-| GET | `/api/cvat/tasks/{taskId}` | Đọc Task |
-| GET | `/api/cvat/jobs` | Liệt kê Job, có thể lọc theo Task |
-| GET | `/api/cvat/jobs/{jobId}` | Đọc Job |
-| GET | `/api/cvat/jobs/{jobId}/frames/{frameId}` | Stream frame qua backend |
-| GET | `/api/cvat/jobs/{jobId}/annotations` | Trả annotation đã normalize |
-| GET | `/api/qa-cases` | Hàng đợi QA, filter/pagination cơ bản |
-| GET | `/api/qa-cases/{caseId}` | Chi tiết QA Case |
-| GET | `/api/qa-cases/{caseId}/cvat-link` | Deep-link sau khi xác minh mapping |
-| GET | `/api/qa-cases/{caseId}/audit` | Audit seed của case |
-
-Public API read-only hiện được công bố dưới `/api/v1`; `/api` được giữ làm compatibility alias nhưng ẩn khỏi OpenAPI. Authentication, idempotency, optimistic concurrency và command API vẫn là mục tiêu tiếp theo.
-
-### 3. CVAT Integration
-
-The real-dataset MVP also exposes `POST /api/v1/dataset/cvat/provision`. It
-uploads selected Agent-evaluated images through the backend-only CVAT client,
-records `dataset_id + version + split + image_id + SHA-256` together with the
-CVAT Task/Job/Frame, and attaches that mapping to matching QA cases. The
-default scope is `evaluated`; a full split can be requested explicitly.
-Repeated provisioning is idempotent for unchanged image hashes.
-See [`docs/CVAT_DATASET_PROVISIONING.md`](docs/CVAT_DATASET_PROVISIONING.md) for
-the operator flow and API examples.
-
-CVAT là annotation editor duy nhất; Dashboard không cố tái tạo đầy đủ công cụ chỉnh nhãn.
-
-`CvatService` chịu trách nhiệm:
-
-- Gửi PAT qua `Authorization: Bearer ...` từ backend.
-- Map lỗi timeout, network, unauthorized, not-found, invalid response và upstream error thành error contract ổn định.
-- Đọc Project/Task/Job metadata, frame và annotation.
-- Chuẩn hóa shape, track và tag CVAT sang response nội bộ.
-- Kiểm tra Project/Task/Job/frame của QA Case trước khi tạo deep-link.
-- Không đưa PAT vào URL, response hoặc browser storage.
-
-Với Ground Truth Job, CVAT có thể không áp dụng query `frame`; backend trả fallback URL và cảnh báo để người dùng chuyển frame thủ công.
-
-Chi tiết tích hợp nằm tại [`docs/CVAT_INTEGRATION.md`](docs/CVAT_INTEGRATION.md).
-
-### 4. AI Agent — LangGraph skeleton
-
-- **Trạng thái:** mới là template kỹ thuật, chưa tham gia luồng FastAPI hoặc QA Queue.
-- **Entrypoint mẫu:** `src/agents/graph.py`.
-- **State mẫu:** `query`, `context`, `analysis`, `response`, `error`, `metadata` trong `src/agents/state.py`.
-- **Nodes mẫu:** `analyze` và `respond`.
-- **LLM factory:** `src/services/llm.py` tạo `ChatOpenAI` từ backend settings.
-
-Flow mẫu hiện tại:
-
-```mermaid
-flowchart LR
-    START --> ANALYZE[analyze]
-    ANALYZE --> CHECK{Có lỗi?}
-    CHECK -->|Có| END
-    CHECK -->|Không| RESPOND[respond]
-    RESPOND --> END
-```
-
-Agent production dự kiến chỉ nhận evidence có cấu trúc để giải thích và đưa recommendation. Risk score phải do thuật toán deterministic tính; Agent không được tự sửa Ground Truth, gọi sync, restore hoặc approve.
-
-### 5. Database
-
-- **Hiện tại:** PostgreSQL 16 + `asyncpg`, SQLAlchemy async và Alembic.
-- **Cấu hình:** `DATABASE_URL` dùng URL `postgresql+asyncpg://...`; ingestion đồng bộ dùng `LABEL_GUARDIAN_DATABASE_URL` với `postgresql+psycopg://...`.
-- **Migrations:** `migrations/` là nguồn chuẩn của schema và được chạy trước backend/worker.
-- **Mục tiêu production:** PostgreSQL managed/HA với role ứng dụng tối thiểu quyền, backup/restore và schema workflow tiếp tục được chuẩn hóa.
-
-Các bảng hiện tại:
-
-| Bảng | Nội dung |
-|---|---|
-| `qa_cases` | Dataset/sequence/frame, lỗi, risk/priority, status, evidence, recommendation và CVAT mapping |
-| `audit_logs` | Event theo case, actor, before/after JSON, metadata và timestamp |
-| `qa_evaluations` | Kết quả đánh giá Agent/model trên ảnh dataset thật |
-| `cvat_dataset_image_mappings` | Mapping source image với CVAT Project/Task/Job/Frame |
-| `qa_images`, `qa_objects`, `qa_object_provenance` | Ảnh, object đã normalize và provenance ingestion |
-| `ingestion_jobs`, `ingestion_job_events`, `ingestion_assets` | Trạng thái, event và artifact của ingestion workflow |
-
-Database hiện mới đủ cho queue đọc và fixture seed. Append-only audit bằng DB permission, assignment workflow, annotation snapshot, sync attempt, canonical diff, approval và rollback chưa được triển khai.
-
-### 6. Vector Store
-
-- **Hiện tại:** chưa có vector store runtime.
-- `CHROMA_PERSIST_DIR` chỉ là cấu hình kế thừa từ template; Chroma chưa được khai báo trong `pyproject.toml`.
-- Label Guardian baseline không dùng RAG hay similarity search.
-- Chỉ bổ sung vector store khi có use case được xác định và dữ liệu đưa vào đã đáp ứng yêu cầu privacy.
-
-### 7. Fixture, bootstrap và developer tooling
-
-`eval/label_guardian_mini/` là fixture synthetic xác định, gồm:
-
-- 2 sequence × 6 frame, tổng 12 ảnh 1280 × 720.
-- Các class `car`, `pedestrian`, `cyclist`, `traffic_sign`.
-- Ground Truth dạng CVAT XML và COCO JSON.
-- Prediction mock và 6 lỗi QA chủ đích.
-- QA Case cùng mapping CVAT có thể seed vào PostgreSQL sau khi chạy Alembic.
-
-Các script `scripts/label_guardian_*` tạo fixture, provision CVAT, seed database và chạy smoke test. Các script AI20K logging trong cùng thư mục là tooling phục vụ quy trình phát triển, không nằm trong product request path.
-
-### 8. Testing và CI
-
-- Backend: pytest, pytest-asyncio và Ruff.
-- Frontend: Node test runner, TypeScript typecheck và Vite production build.
-- Migration được kiểm tra trên PostgreSQL riêng bằng chu trình upgrade/check/downgrade/upgrade; test local dùng service `postgres-test` ở cổng `5433` và `TEST_DATABASE_URL`.
-- CI trong `.github/workflows/ci.yml` chạy backend và frontend trên self-hosted Linux runner cho PR/push vào `develop` hoặc `main`.
-
-Baseline tài liệu gần nhất ghi nhận 131 backend tests, 1 test skip và 14 frontend tests; đây chỉ là mốc tham khảo, mỗi thay đổi vẫn phải chạy lại test liên quan.
-
-## Data Flow
-
-### Mock mode
-
-1. Browser khởi tạo `MockDataProvider` từ các seed trong `frontend/src/data/mock/`.
-2. View gọi action qua repository contract.
-3. Mock operations tạo state mới, audit/review state giả lập và lưu vào `localStorage`.
-4. Không cần FastAPI, database hoặc CVAT.
-5. Mock data không cung cấp external CVAT URL; nút mở CVAT được khóa.
-
-### API/CVAT read flow
-
-1. Frontend gọi `GET /api/qa-cases` để tải hàng đợi từ PostgreSQL qua FastAPI.
-2. Người dùng chọn case; frontend dùng CVAT mapping trong response để tải frame và annotation qua FastAPI.
-3. FastAPI gọi CVAT bằng PAT chỉ tồn tại ở backend.
-4. Backend stream frame hoặc normalize annotation trước khi trả browser.
-5. Khi người dùng bấm **Mở trong CVAT**, frontend gọi `/api/qa-cases/{caseId}/cvat-link`.
-6. Backend đọc case, gọi lại CVAT để kiểm tra Job thuộc đúng Task/Project và frame nằm trong range.
-7. Backend trả URL không chứa credential; browser mở URL bằng session đăng nhập CVAT riêng của người dùng.
-
-### Fixture/bootstrap flow
-
-1. Generator tạo dataset synthetic có thể tái lập.
-2. Bootstrap script provision Project/Task/Job và upload frame/annotation lên CVAT.
-3. Mapping thật được lưu trong fixture mapping file.
-4. Seed script kiểm tra mapping với CVAT trước khi ghi `qa_cases` và `audit_logs` vào một transaction.
-5. Chạy lại seed bỏ qua case đã tồn tại.
-
-### Workflow production mục tiêu
+Public topology:
 
 ```text
-Dataset version → Ingestion/Privacy → CVAT + Inference → Rules
-→ Evidence → Deterministic Risk + Agent explanation → QA Queue
-→ Human review → CVAT correction → Manual sync → Canonical diff
-→ Reviewer approval → Correction layer/Dataset version mới → Audit/Report
+https://labelguardian.space       -> Vercel frontend
+https://www.labelguardian.space   -> Vercel frontend
+https://api.labelguardian.space   -> Caddy -> FastAPI trên GCP VM
 ```
 
-Workflow correction chuẩn là **sync trước, approval sau**. Trạng thái `approved_pending_sync` còn trong mock/schema hiện tại là trạng thái legacy và không phải contract production cuối cùng.
+## 3. Runtime modes
 
-## Deployment Architecture
+Frontend có hai trục cấu hình độc lập:
 
-### Hiện tại
+| Biến | Giá trị | Hành vi |
+| --- | --- | --- |
+| `VITE_DATA_SOURCE` | `api` | Dùng `/api/v1` cho dataset, QA case, editor, report và pipeline data có hỗ trợ |
+| `VITE_DATA_SOURCE` | `mock` | Dùng fixture và `MockRepository`; state demo lưu trong `localStorage` |
+| `VITE_AUTH_MODE` | `supabase` | Dùng Supabase session và gửi bearer token tới FastAPI |
+| `VITE_AUTH_MODE` | `mock` | Dùng login/role demo phía browser; chỉ phù hợp local |
 
-Docker Compose hiện chạy PostgreSQL và backend; frontend vẫn chạy riêng bằng Vite:
+Production phải dùng `api + supabase`. Giá trị mặc định trong code fail-closed về hai chế độ production nếu biến build bị thiếu. Local có thể dùng API với `AUTH_ENABLED=false`; backend khi đó tạo ephemeral admin từ cấu hình development.
+
+## 4. Frontend
+
+### 4.1. Công nghệ và cấu trúc
+
+- React 19, TypeScript, Vite và React Router.
+- TanStack Query quản lý server state, cache và invalidation.
+- Custom CSS được chia theo token, shell, feature và view.
+- Supabase client chỉ quản lý auth session; dữ liệu nghiệp vụ không được đọc trực tiếp từ Supabase Data API.
+
+| Khu vực | Vị trí | Vai trò |
+| --- | --- | --- |
+| App/bootstrap | `frontend/src/main.tsx`, `frontend/src/App.tsx` | Provider, auth gate, route assembly |
+| Routing/IA | `frontend/src/config/` | Route, role visibility và workflow labels |
+| API boundary | `frontend/src/api/` | Authenticated JSON/blob client và React Query hooks |
+| Auth | `frontend/src/auth/` | Supabase client và auth context |
+| Domain/state | `frontend/src/domain/`, `frontend/src/state/` | Domain types, mock repository và demo operations |
+| QA feature | `frontend/src/features/qa-queue/` | Work queue, case registry, API/mock presentation |
+| Views | `frontend/src/views/` | Overview, editor, reports, dataset, pipeline, settings |
+| Components/styles | `frontend/src/components/`, `frontend/src/styles/` | Shared UI, login visual, layout và design system |
+
+### 4.2. Routes
+
+| Route | Chức năng | Role production |
+| --- | --- | --- |
+| `/` | Landing page công khai | Public |
+| `/overview` | KPI, workload và ingestion/evaluation status | Tất cả role |
+| `/qa-queue` | Chọn frame/dataset và chạy Agent QA | Reviewer, Admin |
+| `/qa-cases` | Registry finding, filter và review status | Tất cả role |
+| `/cases/:findingId` | Case detail của mock workflow | Tất cả role; API mode dùng registry/editor |
+| `/editor` | Chỉnh annotation, history và restore | Tất cả role; write được backend kiểm tra |
+| `/reports` | QA metrics từ API hoặc mock projection | Reviewer, Admin |
+| `/dataset-runs` | Dataset/version/coverage | Reviewer, Admin |
+| `/pipeline` | Cloud ingestion run và event | Reviewer, Admin |
+| `/settings` | Profile, role admin và cấu hình demo | Admin |
+
+Route `/real-data` chỉ là compatibility redirect sang `/qa-queue`.
+
+### 4.3. 2D Editor
+
+2D Editor là công cụ chỉnh nhãn chính. Editor hỗ trợ bounding-box CRUD, class, track ID, attributes, visibility, pan/zoom, undo/redo, keyboard shortcuts, validation, Save & Next, history và restore.
+
+Frontend thao tác bbox ở dạng `xywh`; API lưu contract pixel `xyxy`. Save gửi `expectedRevision`; HTTP 409 buộc tab cũ reload thay vì ghi đè revision mới hơn.
+
+## 5. Backend
+
+FastAPI được tổ chức như modular monolith. `src/main.py` khởi tạo settings, async SQLAlchemy session factory, auth verifier, dataset service, CORS và health endpoints. `src/api/routes.py` lắp các module nghiệp vụ dưới prefix `/api/v1`.
 
 ```mermaid
 flowchart LR
-    BROWSER[Browser]
-    VITE[Vite dev server :5173]
-    BACKEND[FastAPI :8000]
-    POSTGRES[(PostgreSQL 16\npostgres_data volume)]
-    CVAT[External CVAT]
-
-    BROWSER --> VITE
-    VITE -->|proxy /api| BACKEND
-    BACKEND --> POSTGRES
-    BACKEND --> CVAT
+    ROUTE[FastAPI route] --> AUTHZ[Auth/RBAC dependencies]
+    AUTHZ --> SERVICE[Domain service]
+    SERVICE --> ORM[SQLAlchemy models/repositories]
+    ORM --> DB[(PostgreSQL)]
+    SERVICE --> STORAGE[GCS / local cache]
+    SERVICE --> AGENT[Label QA Agent]
 ```
 
-- Frontend được chạy riêng bằng Vite; chưa có frontend container hoặc reverse proxy production.
-- `docker-compose.yml` khai báo `postgres`, `backend` và service `postgres-test` tách biệt cho kiểm thử.
-- Backend chờ PostgreSQL healthy, chạy `alembic upgrade head`, rồi mới khởi động Uvicorn.
-- Dữ liệu phát triển nằm trong named volume `postgres_data`; test database dùng cổng host `5433` và không được dùng cho dữ liệu thật.
-- Docker image chạy Python 3.12, multi-stage install và non-root user.
-- Compose hiện phù hợp phát triển/private staging một máy; chưa phải kiến trúc HA/multi-instance.
+### 5.1. API groups
 
-### Mục tiêu production
+| Prefix | Chức năng chính |
+| --- | --- |
+| `/health`, `/api/v1/health` | Liveness không truy cập dependency ngoài |
+| `/ready` | Readiness bằng `SELECT 1` tới PostgreSQL |
+| `/api/v1/auth` | Profile hiện tại, cập nhật tên, danh sách user và cấp role |
+| `/api/v1/dataset/images` | Duyệt ảnh, metadata và private content |
+| `/api/v1/dataset/frame-samples` | Nhóm camera theo sequence/sample, filter và pagination |
+| `/api/v1/dataset/pointclouds/.../content` | Stream point-cloud bytes từ GCS |
+| `/api/v1/dataset/images/{split}/{imageId}/evaluate` | Chạy Agent, tùy chọn persist evaluation/case |
+| `/api/v1/dataset/images/{split}/{imageId}/annotations` | Đọc/lưu effective annotation document |
+| `.../annotations/history`, `.../restore` | Lịch sử revision và restore bất biến |
+| `/api/v1/qa-cases` | Lọc case, đọc detail/audit và cập nhật decision status |
+| `/api/v1/ingestion/runs` | Read-only ingestion run, stage, event và artifact status |
 
-- Frontend static build phía sau reverse proxy/CDN.
-- FastAPI có nhiều instance stateless.
-- PostgreSQL managed/HA cho metadata và workflow; migration chạy một lần bằng release job.
-- Redis + Celery cho queue CPU/GPU/report.
-- MinIO cho artifact; DVC dùng S3 remote.
-- Keycloak OIDC/PKCE cho authentication.
-- CVAT self-hosted khi xử lý dữ liệu nhạy cảm.
-- Metrics, structured logs, tracing, backup và restore drill.
+`docs/openapi.json` là contract được sinh từ app và CI chặn drift bằng `scripts/check_openapi.py`.
 
-## Security
+## 6. Xác thực và phân quyền
 
-### Đã áp dụng trong baseline
+```text
+Browser -> Supabase Auth -> access token
+        -> FastAPI JWT verifier -> application_users
+        -> role dependency -> domain service
+```
 
-- Secret nằm trong `.env`; `.env` không được commit.
-- CVAT PAT dùng `SecretStr`, được trim/validate và chỉ đọc trong backend.
-- `CVAT_BASE_URL` từ chối embedded credentials, query string và fragment.
-- Backend không follow redirect khi gọi CVAT.
-- Frontend không nhận hoặc lưu PAT; deep-link không chứa token.
-- Pydantic validate config, path/query parameters và response schemas.
-- CORS dùng allowlist cấu hình, không cho credentials; baseline chỉ mở `GET` và `OPTIONS`.
-- Lỗi CVAT được chuẩn hóa, không trả raw upstream body hoặc credential.
+- Supabase Auth sở hữu credential và session; ứng dụng không lưu password hash.
+- FastAPI xác minh issuer, audience, signature và expiry bằng JWKS; secret server-side chỉ hỗ trợ project HS256 cũ.
+- `application_users.id` bằng claim `sub`; profile mới mặc định `annotator` trừ bootstrap admin allowlist.
+- Backend lấy actor từ token, không tin `actorId`, role hoặc user metadata do client gửi.
+- User bị disable nhận HTTP 403.
+- Production không khởi động nếu `AUTH_ENABLED=false`, Supabase URL thiếu, database còn trỏ localhost hoặc CORS không phải explicit HTTPS origin.
 
-### Khoảng trống trước production
+Quyền write chính:
 
-- Chưa có JWT/OIDC, backend RBAC hoặc user session thật.
-- Role switch frontend hiện chỉ phục vụ demo và không phải security boundary.
-- Chưa có rate limiting, command authorization hoặc CSRF strategy cho write API.
-- Chưa có ingestion/anonymization khuôn mặt và biển số.
-- Chưa enforce append-only audit bằng DB permissions.
-- Chưa có secret manager, rotation policy, network segmentation hoặc production observability.
+| Thao tác | Role |
+| --- | --- |
+| Đọc dataset, annotation và case | Annotator, Reviewer, Admin |
+| Lưu/restore annotation | Annotator, Reviewer, Admin |
+| Chạy Agent và persist case | Reviewer, Admin |
+| Cập nhật QA case status | Reviewer, Admin |
+| Xem ingestion pipeline | Reviewer, Admin |
+| Quản lý role | Admin |
 
-Nguyên tắc bắt buộc cho Agent/LLM: chỉ gửi evidence có cấu trúc và đã loại PII; không gửi raw image, PAT, API key hoặc credential.
+## 7. Dữ liệu và storage
 
-## Design Decisions
+### 7.1. PostgreSQL
 
-| Decision | Choice | Reason |
-|---|---|---|
-| Product boundary | Dashboard điều phối, CVAT chỉnh annotation | Tránh xây lại annotation editor và giữ một nguồn chỉnh sửa chuyên sâu |
-| Backend architecture | FastAPI modular monolith | Đủ đơn giản cho MVP, vẫn tách route/service/repository để mở rộng |
-| Frontend framework | React 19 + TypeScript + Vite | Phù hợp dashboard tương tác và build/typecheck nhanh |
-| Frontend data strategy | Mock-first với QA Queue API opt-in | Cho phép hoàn thiện UX trước, đồng thời giữ ranh giới tích hợp rõ |
-| Navigation hiện tại | React Router | Clean URL và browser history chuẩn; production host cần SPA fallback |
-| Persistence | PostgreSQL + asyncpg/psycopg + Alembic | Giữ cùng database semantics giữa phát triển, CI và triển khai |
-| CVAT credential | Backend-only PAT | Browser không được giữ hoặc gửi credential CVAT |
-| CVAT deep-link | Backend kiểm tra rồi mới cấp URL | Không tin mapping mock/stale và không hardcode hostname giả |
-| Annotation display | Backend proxy frame và normalize annotation | Ẩn CVAT API/PAT, giữ DTO ổn định cho frontend |
-| Risk | Deterministic | Có thể kiểm toán và không phụ thuộc LLM |
-| Agent authority | Advisory only | Human giữ quyền quyết định; Agent không được sửa/sync/approve |
-| Correction lifecycle | Sync trước, approval sau | Reviewer phê duyệt trên canonical before/after diff |
-| Dataset history | Version mới, không ghi đè | Bảo toàn provenance và hỗ trợ audit/rollback |
-| Large artifacts mục tiêu | DVC + MinIO | Database chỉ giữ metadata, URI và hash |
-| Vector store | Chưa sử dụng | Baseline không có use case RAG đủ rõ để thêm hạ tầng |
+PostgreSQL 16 là persistence runtime duy nhất. FastAPI dùng `asyncpg`; ingestion worker đồng bộ dùng `psycopg`; Alembic quản lý schema.
 
-## Repository Structure
+| Bảng | Nội dung |
+| --- | --- |
+| `application_users` | Profile, role và trạng thái khóa |
+| `qa_images` | Image/frame metadata và object URI |
+| `qa_objects` | Annotation gốc đã normalize |
+| `qa_object_provenance` | Nguồn và provenance của object |
+| `qa_evaluations` | Report/metrics Agent theo ảnh và revision |
+| `qa_cases` | Finding, risk, evidence, recommendation và review status |
+| `audit_logs` | Event audit của QA case/revision |
+| `annotation_revisions` | Snapshot annotation bất biến theo dataset/version/split/image |
+| `ingestion_jobs` | Ingestion request, lease, trạng thái và metrics |
+| `ingestion_job_events` | Timeline stage/event |
+| `ingestion_assets` | Artifact được tạo trong ingestion |
+
+Các migration security bật RLS trên bảng backend và thu hồi quyền trực tiếp từ public/authenticated roles. Backend database role là ranh giới truy cập dữ liệu nghiệp vụ.
+
+### 7.2. GCS và cache
+
+- Metadata, audit và revision nằm trong PostgreSQL; binary lớn nằm trong GCS.
+- Frontend không dùng GCS credential và không đọc bucket trực tiếp.
+- FastAPI stream image/point-cloud private sau khi auth; local cache chỉ tối ưu đọc và có thể fallback cho dataset chính thức đã đồng bộ.
+- Ingestion artifacts dùng prefix `ops/ingestion-runs/{runId}`; canonical data nằm dưới `datasets/official/...`.
+
+### 7.3. Revision model
+
+Dataset ingest là revision 0. Save hoặc Restore luôn tạo revision mới; revision cũ không bị sửa/xóa. Effective labels là snapshot mới nhất và được dùng cho dataset view, Editor và lần Agent evaluation tiếp theo.
+
+Identity của annotation/case là `dataset_id + dataset_version + split + image_id`. Revision write, Agent persist và route từ QA Case sang Editor phải giữ đủ bốn trường để không trộn ảnh trùng ID giữa dataset hoặc release.
+
+## 8. Label QA Agent
+
+Agent là LangGraph pipeline có thứ tự cố định, không phải autonomous ReAct agent:
+
+```mermaid
+flowchart LR
+    LOAD[Load GT labels] --> YOLO[YOLO inference]
+    YOLO --> VALIDATE[Validate input]
+    VALIDATE --> MATCH[Hungarian / IoU matching]
+    MATCH --> METRICS[Compute metrics]
+    METRICS --> FLAGS[Deterministic issue rules]
+    FLAGS -->|có issue| LLM[Optional LLM explanation]
+    FLAGS -->|không issue| REPORT[Build report]
+    LLM --> REPORT
+```
+
+Issue type, severity, blocking flag và metric được tính bằng code deterministic. LLM chỉ giải thích evidence và đề xuất; nếu API key/quota/network lỗi, report vẫn được tạo bằng fallback.
+
+Evaluate có cache giới hạn theo process. Khi `persist=true`, backend lưu `qa_evaluations`, upsert QA cases và trả các case ID được tạo.
+
+## 9. Ingestion
+
+Ingestion hỗ trợ adapter KITTI và nuScenes, local workflow và GCP Batch worker. Luồng chuẩn:
+
+```text
+official source/archive
+  -> acquire raw
+  -> normalize image/object/provenance
+  -> validate
+  -> upload canonical artifacts to GCS
+  -> persist PostgreSQL metadata
+  -> expose pipeline run/events to frontend
+```
+
+Worker dùng lease/claim, retry và stale-run recovery để tránh hai process cùng sở hữu một job. Full KITTI/nuScenes vẫn là batch operation nặng; product split được dùng cho runtime/demo, còn smoke scope dành cho kiểm thử nhanh.
+
+## 10. Luồng nghiệp vụ chính
+
+### Agent evaluation
+
+1. Frontend tải frame samples và effective annotations.
+2. Reviewer/Admin gọi evaluate cho một ảnh.
+3. Backend tải ảnh private, ghép effective revision với Agent input và chạy pipeline.
+4. Khi persist, evaluation và findings được ghi trong một workflow database.
+5. QA Queue/QA Cases invalidate query và hiển thị evidence mới.
+
+### Annotation correction
+
+1. QA case mở `/editor?split=...&imageId=...`.
+2. Editor tải document và revision hiện tại.
+3. Người dùng chỉnh bbox/metadata rồi gửi snapshot cùng `expectedRevision`.
+4. Backend validate, khóa theo optimistic revision và tạo snapshot mới.
+5. Case liên quan được refresh evidence/status và audit ghi actor từ token.
+6. Restore cũng tạo revision mới, không quay ngược hoặc xóa lịch sử.
+
+### Authentication
+
+1. Browser đăng nhập Supabase và giữ session bằng Supabase SDK.
+2. Frontend gửi access token cho mọi JSON và private asset request.
+3. Backend xác minh JWT, ensure application profile và kiểm tra role tại endpoint.
+
+## 11. Deployment
+
+Production dùng mô hình hybrid:
+
+```mermaid
+flowchart LR
+    PUSH[Push main deploy repo] --> VERCEL[Vercel build frontend]
+    PUSH --> ACTION[GitHub Actions self-hosted]
+    ACTION --> MIGRATE[One-shot Alembic migration]
+    ACTION --> VM[Docker Compose backend + Caddy]
+    VERCEL --> USER[Browser]
+    USER --> VM
+    VM --> DB[(Supabase PostgreSQL)]
+    VM --> GCS[(Private GCS)]
+```
+
+- Vercel root directory là `frontend`; `frontend/vercel.json` cấu hình build, security headers, API proxy và SPA fallback.
+- VM dùng `docker-compose.selfhost.yml`; service `backend-migrate` chạy migration một lần, `backend` phục vụ API và `proxy` cung cấp TLS.
+- `.github/workflows/deploy-selfhost.yml` build candidate, migrate, health-check, rollback khi lỗi và promote image ổn định.
+- Secret production chỉ nằm trong Vercel environment hoặc `/opt/label-guardian/.env.production` trên VM; không commit vào Git.
+
+Runbook chuẩn: [`docs/HYBRID_VERCEL_VM_DEPLOYMENT.md`](docs/HYBRID_VERCEL_VM_DEPLOYMENT.md).
+
+## 12. Security controls
+
+Đã có:
+
+- Supabase JWT verification và backend RBAC.
+- RLS/no-public-policy cho bảng backend.
+- Private GCS streaming qua authenticated API.
+- Explicit production CORS allowlist.
+- CSP, HSTS, frame denial, MIME sniffing protection và permissions policy trên Vercel.
+- Optimistic locking cho annotation revision.
+- Secret tách khỏi frontend build; `VITE_*` chỉ chứa giá trị public.
+- Production settings fail fast khi auth/database/CORS không an toàn.
+
+Còn thiếu hoặc cần tăng cường:
+
+- Rate limiting và abuse protection ở edge/API.
+- Secret manager/rotation tự động thay cho file env dài hạn.
+- Metrics, distributed tracing, alerting và backup/restore drill định kỳ.
+- Assignment/lease cho người review cùng frame.
+- Export/release workflow cho revision đã duyệt.
+- E2E browser tests cho gesture và auth redirect.
+
+## 13. Testing và CI
+
+CI trên push/PR tới `main` hoặc `develop` chạy:
+
+- Ruff và mypy cho backend.
+- OpenAPI drift check.
+- Alembic upgrade/check/downgrade/upgrade trên PostgreSQL test riêng.
+- Pytest + coverage.
+- Frontend Node tests, TypeScript typecheck và Vite production build.
+- Backend Docker image build và smoke import cho Torch/Ultralytics/app.
+
+Không ghi số lượng test cố định trong tài liệu kiến trúc vì con số thay đổi theo commit. Xem [`docs/TESTING.md`](docs/TESTING.md) cho lệnh và test matrix.
+
+## 14. Quyết định kiến trúc
+
+| Quyết định | Lựa chọn | Lý do |
+| --- | --- | --- |
+| Product boundary | QA workflow + 2D Editor tích hợp | Sửa case trong cùng auth/audit/revision boundary |
+| Backend | FastAPI modular monolith | MVP đơn giản nhưng vẫn tách route/service/model |
+| Persistence | PostgreSQL + Alembic | Cùng semantics giữa local, CI và production |
+| Asset storage | Private GCS | Không đưa binary lớn vào database hoặc Git |
+| Auth | Supabase session + backend-owned role | Tách identity khỏi authorization nghiệp vụ |
+| Agent | Deterministic pipeline, LLM advisory | Có thể kiểm thử, audit và fallback |
+| Revision | Immutable snapshot + optimistic lock | Không mất lịch sử và không silent overwrite |
+| Frontend data | API-first production, mock mode local | Demo độc lập nhưng production fail-closed |
+| Deployment | Vercel frontend + VM backend | CDN cho SPA, compute/data credential giữ ở backend |
+| Large ingestion | GCP Batch | Không chặn web request bằng job dataset nhiều giờ |
+
+## 15. Cấu trúc repository
 
 ```text
 .
+├── frontend/                 React/Vite SPA
+│   ├── src/api/              API client và query hooks
+│   ├── src/auth/             Supabase auth context
+│   ├── src/components/       Shared UI và layout
+│   ├── src/features/         QA Queue/Case modules
+│   ├── src/state/            Mock repository/state
+│   ├── src/styles/           Design tokens và feature CSS
+│   ├── src/views/            Route-level views
+│   └── test/                 Frontend contract tests
 ├── src/
-│   ├── api/             FastAPI routes và dependencies
-│   ├── services/        CVAT, QA Case, normalizer và LLM factory
-│   ├── repositories/    Truy cập QA Case và audit data
-│   ├── models/          ORM models và Pydantic schemas
-│   ├── db/              Async engine/session/base
-│   └── agents/          LangGraph skeleton, chưa nối runtime
-├── frontend/
-│   ├── src/api/         Frontend API client và DTO
-│   ├── src/domain/      Domain types, permission, queue logic
-│   ├── src/data/mock/   Mock catalog/review/workflow
-│   ├── src/state/       Repository boundary và state operations
-│   ├── src/features/    Feature modules, hiện có QA Queue
-│   ├── src/views/       Các workspace/màn hình
-│   └── test/            Frontend tests
-├── migrations/          Alembic migrations
-├── eval/                Fixture Label Guardian mini và kết quả eval
-├── scripts/             Fixture, seed, CVAT smoke và AI20K tooling
-├── tests/               Backend unit/integration tests
-├── docs/                Thiết kế chi tiết, trạng thái, testing và roadmap
-├── Dockerfile            Backend image
-├── docker-compose.yml    PostgreSQL, test database và backend local
-└── ARCHITECTURE.md       Tài liệu kiến trúc tổng thể này
+│   ├── agents/               LangGraph QA pipeline
+│   ├── api/                  FastAPI route modules/dependencies
+│   ├── db/                   Async engine/session
+│   ├── models/               ORM và Pydantic schemas
+│   ├── repositories/         Database access abstraction
+│   └── services/             Auth, dataset, editor, Agent, GCS, ingestion
+├── migrations/               Alembic schema history
+├── scripts/                  Contract checks, ingestion và deploy tooling
+├── tests/                    Backend tests
+├── deploy/                   Environment examples và GCP Batch templates
+├── docs/                     Product, operation và development docs
+├── docker-compose.yml        Local PostgreSQL/backend
+├── docker-compose.selfhost.yml Production backend/migration/Caddy
+├── frontend/vercel.json      Vercel build, proxy và security headers
+└── ARCHITECTURE.md           Canonical architecture document
 ```
 
-## Current Scope and Roadmap
+## 16. Tài liệu liên quan
 
-| Khu vực | Hiện tại | Bước mở rộng chính |
-|---|---|---|
-| Frontend | React Router; QA Queue dùng TanStack Query/API V1; các view khác dùng mock | Toàn bộ màn hình dùng API và OpenAPI-generated types |
-| Backend | `/api/v1` read-only cho CVAT/QA Case; `/api` là alias | Command workflow, auth, concurrency/idempotency |
-| Persistence | PostgreSQL, Alembic và schema QA/ingestion hiện có | Hoàn thiện normalized workflow schema, HA, role và backup |
-| CVAT | Read, normalize, proxy frame, validated deep-link | Snapshot, sync, diff, approval, restore và webhook |
-| AI/risk | Agent skeleton; evidence/risk trong fixture | Inference, rule engine, deterministic risk và Agent production |
-| Data/privacy | Synthetic fixture | KITTI/nuScenes ingestion, DVC/MinIO và anonymization |
-| Runtime | Compose cho PostgreSQL/backend; frontend chạy Vite | Multi-service deployment, workers, auth và observability |
-| Reporting | Mock/client-side | PDF/CSV/JSON artifact có provenance |
-
-## Related Documentation
-
-- [`README.md`](README.md): cách cài đặt, chạy và kiểm thử nhanh.
-- [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md): trạng thái triển khai chi tiết.
-- [`docs/LABEL_GUARDIAN_ARCHITECTURE.md`](docs/LABEL_GUARDIAN_ARCHITECTURE.md): contract nghiệp vụ và kiến trúc V1 sâu hơn.
-- [`docs/LABEL_GUARDIAN_IMPLEMENTATION_PLAN.md`](docs/LABEL_GUARDIAN_IMPLEMENTATION_PLAN.md): roadmap theo phase.
-- [`docs/CVAT_INTEGRATION.md`](docs/CVAT_INTEGRATION.md): mapping, proxy, deep-link và sync mục tiêu.
-- [`docs/FRONTEND_UI.md`](docs/FRONTEND_UI.md): information architecture và UI behavior.
-- [`docs/TESTING.md`](docs/TESTING.md): test matrix và smoke test.
+- [`README.md`](README.md): quick start và API chính.
+- [`docs/README.md`](docs/README.md): mục lục và nguồn chuẩn của bộ tài liệu.
+- [`docs/architecture_diagram.md`](docs/architecture_diagram.md): sơ đồ topology và revision flow rút gọn.
+- [`PRODUCT.md`](PRODUCT.md): product contract ngắn gọn dùng bởi repository tooling.
+- [`DESIGN.md`](DESIGN.md): design system và quy tắc giao diện.
+- [`docs/FRONTEND_UI.md`](docs/FRONTEND_UI.md): route và behavior frontend.
+- [`docs/TESTING.md`](docs/TESTING.md): test matrix và release checks.
+- [`docs/HYBRID_VERCEL_VM_DEPLOYMENT.md`](docs/HYBRID_VERCEL_VM_DEPLOYMENT.md): production runbook.
+- [`docs/SUPABASE_DEVELOPMENT.md`](docs/SUPABASE_DEVELOPMENT.md): auth/database development.
+- [`docs/GOLDEN_DATASET.md`](docs/GOLDEN_DATASET.md): dataset và storage contract.
+- [`docs/official_cloud_ingestion_automation.md`](docs/official_cloud_ingestion_automation.md): ingestion design và giới hạn.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md): workflow đóng góp và coding convention.
+- [`SECURITY.md`](SECURITY.md): báo cáo lỗ hổng và security baseline.

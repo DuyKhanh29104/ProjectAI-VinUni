@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
 } from "react";
 import type {
   QaCaseDto,
@@ -49,11 +50,21 @@ export function ApiQueueComparisonViewer({ qaCase }: { qaCase?: QaCaseDto }) {
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [frameSize, setFrameSize] = useState({ width: 1280, height: 720 });
   const [frameError, setFrameError] = useState("");
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
+  const dragOriginRef = useRef<{
+    pointerId: number;
+    clientX: number;
+    clientY: number;
+    panX: number;
+    panY: number;
+  } | null>(null);
   const frameAsset = useAuthenticatedAssetUrl(qaCase?.evidence.imageUrl);
 
   useEffect(() => {
     setZoom(100);
+    setPan({ x: 0, y: 0 });
     setFrameError("");
   }, [qaCase?.id]);
   useEffect(() => {
@@ -106,6 +117,35 @@ export function ApiQueueComparisonViewer({ qaCase }: { qaCase?: QaCaseDto }) {
   const scale = (fitScale * zoom) / 100;
   const canvasWidth = sourceWidth * scale;
   const canvasHeight = sourceHeight * scale;
+  const startPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragOriginRef.current = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      panX: pan.x,
+      panY: pan.y,
+    };
+    setIsDragging(true);
+  };
+  const movePan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const origin = dragOriginRef.current;
+    if (!origin || origin.pointerId !== event.pointerId) return;
+    setPan({
+      x: origin.panX + event.clientX - origin.clientX,
+      y: origin.panY + event.clientY - origin.clientY,
+    });
+  };
+  const stopPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (dragOriginRef.current?.pointerId !== event.pointerId) return;
+    dragOriginRef.current = null;
+    setIsDragging(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
   return (
     <div className="queue-comparison-viewer">
       <div className="queue-viewer-heading">
@@ -116,7 +156,14 @@ export function ApiQueueComparisonViewer({ qaCase }: { qaCase?: QaCaseDto }) {
         <Badge tone="info">Frame {qaCase.frameIndex}</Badge>
       </div>
       <div className="queue-viewer-toolbar">
-        <Button size="sm" variant="ghost" onClick={() => setZoom(100)}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            setZoom(100);
+            setPan({ x: 0, y: 0 });
+          }}
+        >
           Vừa khung
         </Button>
         <div className="viewer-compare-controls">
@@ -165,17 +212,30 @@ export function ApiQueueComparisonViewer({ qaCase }: { qaCase?: QaCaseDto }) {
           </Button>
         </div>
       </div>
-      <div ref={stageRef} className="queue-viewer-stage tool-select">
+      <div
+        ref={stageRef}
+        className={`queue-viewer-stage tool-select ${isDragging ? "is-dragging" : ""}`}
+        aria-label="Kéo chuột để di chuyển ảnh"
+        onPointerDown={startPan}
+        onPointerMove={movePan}
+        onPointerUp={stopPan}
+        onPointerCancel={stopPan}
+        onLostPointerCapture={stopPan}
+      >
         <div
           className="queue-viewer-stage-content"
           style={{
-            width: Math.max(availableWidth, canvasWidth),
-            height: Math.max(availableHeight, canvasHeight),
+            width: availableWidth,
+            height: availableHeight,
           }}
         >
           <div
             className="queue-viewer-canvas is-auto-fit"
-            style={{ width: canvasWidth, height: canvasHeight }}
+            style={{
+              width: canvasWidth,
+              height: canvasHeight,
+              transform: `translate(${pan.x}px, ${pan.y}px)`,
+            }}
           >
             {frameAsset.source ? (
               <img

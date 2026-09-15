@@ -62,14 +62,12 @@ py -3.12 -c "import getpass; from urllib.parse import quote; print(quote(getpass
 
 ```dotenv
 DATASET_BACKEND=database
-DATASET_ROOT=data/cloud-db-placeholder
-DOCKER_DATASET_ROOT=/app/data/cloud-db-placeholder
-DATASET_DEFAULT_SPLIT=smoke
+DATASET_DEFAULT_SPLIT=product
 ```
 
-`DATASET_ROOT` chỉ còn dùng cho chế độ `DATASET_BACKEND=filesystem`. Ở chế độ
-cloud mặc định, Supabase chứa metadata và GCS chứa ảnh/frame. Backend dùng ADC
-hoặc runtime credential để đọc GCS private và stream ảnh cho frontend.
+Ở chế độ cloud mặc định, Supabase chứa metadata và GCS chứa ảnh/frame; workspace
+không cần giữ một bản sao dataset. Backend dùng ADC hoặc runtime credential để
+đọc GCS private và stream ảnh cho frontend.
 
 Đăng nhập GCP CLI/ADC trên mỗi máy developer:
 
@@ -85,7 +83,7 @@ Các giá trị GCS trong `.env` local:
 LABEL_GUARDIAN_STORAGE_BACKEND=gcs
 LABEL_GUARDIAN_GCS_BUCKET=label_guardian_bucket
 LABEL_GUARDIAN_GCS_PROJECT=ai-lab-16-gcp-505508
-LABEL_GUARDIAN_OBJECT_KEY_PREFIX=datasets/official/nuscenes/v1.0-mini/smoke
+LABEL_GUARDIAN_OBJECT_KEY_PREFIX=datasets/official/nuscenes/v1.0-mini/product
 ```
 
 ## 4. Chạy migration — chỉ maintainer
@@ -125,7 +123,7 @@ Kiểm tra:
 ```powershell
 docker compose -f docker-compose.yml -f docker-compose.supabase.yml ps
 docker compose -f docker-compose.yml -f docker-compose.supabase.yml logs --tail 100 backend
-Invoke-WebRequest http://127.0.0.1:8000/api/health
+Invoke-WebRequest http://127.0.0.1:8000/health
 ```
 
 Backend: `http://127.0.0.1:8000`; Swagger: `http://127.0.0.1:8000/docs`.

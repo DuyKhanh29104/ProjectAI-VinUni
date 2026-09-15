@@ -2,7 +2,8 @@
 
 ## Goal
 
-Build a cloud-native ingestion workflow for Label Guardian that can ingest official KITTI and nuScenes datasets from user requests without requiring operators to download archives manually or paste one-off links into scripts.
+The current cloud-native ingestion workflow imports official KITTI and nuScenes
+data without storing dataset archives in the repository or developer workspace.
 
 The workflow should stream official dataset archives into cloud object storage, process the data in workers close to storage, normalize annotations into `QAImage` and `QAObject`, and persist processing state plus QA records in a cloud database.
 
@@ -21,8 +22,8 @@ flowchart LR
     User[User request] --> API[Ingestion API]
     API --> DB[(Cloud PostgreSQL)]
     API --> Secrets[Secret Manager]
-    API --> Queue[Job Queue]
-    Queue --> Worker[Dataset Ingestion Worker]
+    API --> Batch[GCP Cloud Batch]
+    Batch --> Worker[Dataset Ingestion Worker]
     Worker --> Official[Official dataset platform]
     Worker --> Raw[(Cloud Object Storage raw zone)]
     Worker --> Stage[(Cloud Object Storage staging zone)]
@@ -34,40 +35,14 @@ flowchart LR
 
 ### Ingestion API
 
-Owns user-facing dataset requests.
+The authenticated API exposes ingestion state read-only:
 
-Suggested endpoints:
+- `GET /api/v1/ingestion/runs`
+- `GET /api/v1/ingestion/runs/{run_id}`
 
-- `POST /ingestion/credentials/{provider}`: store or rotate official provider credentials.
-- `POST /ingestion/jobs`: create a dataset ingestion job from a user request.
-- `GET /ingestion/jobs/{job_id}`: report progress, counts, current phase, and errors.
-- `POST /ingestion/jobs/{job_id}/cancel`: request cancellation.
-
-Example job request:
-
-```json
-{
-  "provider": "official",
-  "dataset_type": "nuscenes",
-  "version": "v1.0-mini",
-  "split": "mini",
-  "max_samples": null,
-  "target_bucket_prefix": "datasets/nuscenes/v1.0-mini"
-}
-```
-
-For KITTI:
-
-```json
-{
-  "provider": "official",
-  "dataset_type": "kitti",
-  "task": "object_detection",
-  "split": "training",
-  "archives": ["image_2", "label_2", "calib"],
-  "target_bucket_prefix": "datasets/kitti/object"
-}
-```
+Creating Batch jobs remains an operator/release action through `gcloud` and the
+versioned request templates under `deploy/gcp/`. The UI intentionally does not
+submit arbitrary archive URLs or create billable cloud jobs.
 
 ### Credential Broker
 
@@ -86,12 +61,8 @@ Do not persist raw cookies/tokens in SQL.
 
 ### Job Queue
 
-Use a durable queue so jobs can run for hours:
-
-- GCP: Workflows or Cloud Run trigger + Cloud Batch worker
-- Portable: Celery + Redis/RabbitMQ, or Argo Workflows on Kubernetes
-
-Each job should be resumable by checking object storage and database state.
+GCP Cloud Batch runs the worker independently of the operator's machine. Each
+phase resumes from GCS checkpoints and persisted job state.
 
 ### Ingestion Worker
 
@@ -118,7 +89,8 @@ Worker phases:
 7. `persist_records`: transactionally upsert `QAImage`, `QAObject`, and provenance records.
 8. `finalize`: write counts, checksums, duration, and error summary.
 
-The worker should use multipart upload for archives and images. Local disk should be scratch-only and bounded.
+Local worker disk is scratch-only and bounded; canonical output is published to
+GCS and PostgreSQL.
 
 ### Object Storage Layout
 
@@ -146,7 +118,7 @@ The DB stores URLs or bucket/key references, not local paths.
 Current development bucket:
 
 ```text
-gs://label_guardian_bucket/datasets/official/nuscenes/v1.0-mini/smoke/frames/...
+gs://label_guardian_bucket/datasets/official/nuscenes/v1.0-mini/product/frames/...
 ```
 
 The backend streams private GCS objects through `/api/v1/dataset/images/{split}/{image_id}/content`, so the bucket does not need public read access.
@@ -234,11 +206,11 @@ training/
 
 ## User Experience
 
-The user should not paste dataset URLs into scripts. They should:
+The current operational flow is:
 
-1. Connect an official dataset account once.
-2. Create an ingestion request from UI/API.
-3. Watch job progress.
+1. Store provider URLs/credentials in Secret Manager or the operator environment.
+2. Upload a reviewed request document and submit the Cloud Batch template.
+3. Watch job progress from the Pipeline page or API.
 4. Query normalized records after the job finishes.
 
 Local development uses the same dataset selector that cloud jobs will use:
@@ -310,69 +282,23 @@ are ignored by Git, but production deployments must use a managed secret store.
 
 You can also combine login and ingest in one command with `--kitti-login-with-browser`. If CVLIBS still returns HTML instead of a zip after login, the CLI saves that HTML under `data/raw/diagnostics/`; use `--kitti-email` to submit the CVLIBS email/request form automatically, then pass the official direct archive links from your inbox through the `KITTI_*_URL` environment variables.
 
-Example CLI wrapper for development:
-
-```bash
-label-guardian ingest create \
-  --provider official \
-  --dataset nuscenes \
-  --version v1.0-mini \
-  --storage s3://label-guardian-prod/datasets/nuscenes/v1.0-mini
-```
-
 ## Failure Handling
 
 - Credential expired: mark job `blocked_credentials` and notify the requester.
 - Archive checksum mismatch: mark asset failed, keep the raw failed object under quarantine.
 - Worker restart: resume from `ingestion_assets` and object key existence checks.
 - Duplicate request: return the existing active or completed job if request identity matches.
-- Partial object upload: use multipart upload abort and retry with exponential backoff.
+- Partial object upload: retry the idempotent phase; do not publish staging data
+  until validation succeeds.
 
-## Implementation Roadmap
+## Current limitations
 
-### Implemented Local Foundation
+- The API/UI monitors runs but does not create or cancel Cloud Batch jobs.
+- KITTI may still require a browser session or emailed direct links from CVLIBS.
+- Full trainval ingestion needs a larger Batch disk/runtime than the smoke templates.
+- Provider credentials and archive URLs are operator-managed secrets; they are
+  never persisted in Git or QA evidence.
 
-- `IngestionJob`, `IngestionJobEvent`, and `IngestionAsset` SQLAlchemy models are available through the shared `Base` metadata.
-- Alembic migration `3944daf20671` owns the ingestion schema; production code does not call `create_all`.
-- `IngestionAutomationService` can create idempotent local ingestion jobs, run KITTI/nuScenes adapters, upload through the existing S3-compatible client interface, and persist job events/results.
-- `IngestionSettings.object_key_prefix` lets local tests and future cloud workers write deterministic object keys under a dataset/job prefix.
-
-### Phase 1: Cloud-ready backend contracts
-
-- Add `IngestionJob`, `IngestionJobEvent`, and `IngestionAsset` SQLAlchemy models.
-- Add service methods to create jobs and record phase progress.
-- Extend settings for cloud object storage and cloud DB URLs.
-
-### Phase 2: Worker abstraction
-
-- Extract the current local `label_guardian_run_ingestion.py` flow into reusable worker services.
-- Keep local filesystem storage as a dev implementation.
-- Add S3-compatible cloud storage implementation using boto3 multipart upload.
-
-### Phase 3: Provider connectors
-
-- Add `OfficialKittiProvider` and `OfficialNuScenesProvider`.
-- Store provider credentials by secret reference, not raw secret.
-- Resolve official resources at runtime based on dataset request.
-
-### Phase 4: Production orchestration
-
-- Add queue consumer worker.
-- Add progress events and retry policy.
-- Add opt-in integration tests against local PostgreSQL plus real GCP/Supabase cloud in CI secrets.
-
-### Phase 5: UI/API
-
-- Add API endpoints for credential setup, job creation, job status, and cancellation.
-- Add dataset request validation so users select dataset/version/split rather than entering URLs.
-
-## Open Decisions
-
-- Cloud target: GCP Cloud Storage for objects and Supabase PostgreSQL for metadata.
-- Job runner: Celery, cloud-native batch service, or Kubernetes workflow engine.
-- Credential UX: browser login handoff, uploaded cookie file, or manually entered token/session.
-- Whether full official trainval/test datasets should be unpacked fully or indexed lazily from archives.
-
-For fully automatic KITTI ingestion, provide IMAP credentials so the CLI can read the CVLIBS email link and continue downloading without manual inbox steps. Prefer an app password or scoped mailbox credential.
-
-After the first Playwright login, `data/secrets/kitti_cookies.json` is reused automatically by `label_guardian_run_ingestion.py`; use `--kitti-login-with-browser` only when you need to create or refresh that saved session. IMAP credentials are only needed if CVLIBS requires emailed direct archive links and you want the CLI to read those links automatically.
+For automatic KITTI download, use scoped IMAP/app credentials only when CVLIBS
+requires emailed direct links. Playwright cookies under `data/secrets/` are a
+local operator cache ignored by Git, not production credential storage.

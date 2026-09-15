@@ -36,7 +36,7 @@ async def test_llm_failure_keeps_rule_based_issues(monkeypatch: pytest.MonkeyPat
 @pytest.mark.asyncio
 async def test_missing_llm_configuration_also_uses_fallback(monkeypatch: pytest.MonkeyPatch):
     def missing_configuration():
-        raise RuntimeError("GOOGLE_API_KEY is required")
+        raise RuntimeError("OPENAI_API_KEY is required")
 
     monkeypatch.setattr(llm_explain, "get_agent_llm", missing_configuration)
     issue = {
@@ -50,4 +50,4 @@ async def test_missing_llm_configuration_also_uses_fallback(monkeypatch: pytest.
 
     assert result["flagged_issues"][0]["issue_type"] == "missing_label"
     assert "YOLO phát hiện" in result["flagged_issues"][0]["explanation"]
-    assert result["metadata"]["llm_explain_fallback_reason"] == "GOOGLE_API_KEY is required"
+    assert result["metadata"]["llm_explain_fallback_reason"] == "OPENAI_API_KEY is required"

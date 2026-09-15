@@ -98,6 +98,7 @@ class NuScenesAdapter:
     dataset_root: Path
     version: str = "v1.0-mini"
     max_images: int | None = None
+    exclude_sample_tokens: set[str] | None = None
 
     def load(self) -> tuple[list[ImageMetadata], list[QAObjectPayload]]:
         metadata_root = self.dataset_root / self.version
@@ -143,6 +144,8 @@ class NuScenesAdapter:
         images: list[ImageMetadata] = []
         camera_data_by_sample: dict[str, list[dict]] = {}
         for row in tables["sample_data"]:
+            if self.exclude_sample_tokens and row["sample_token"] in self.exclude_sample_tokens:
+                continue
             sensor = calibrated[row["calibrated_sensor_token"]]
             sensor_metadata = sensors.get(sensor.get("sensor_token", ""), {})
             filename_parts = Path(row.get("filename", "")).parts
@@ -165,6 +168,7 @@ class NuScenesAdapter:
         selected_sample_tokens = sorted(
             camera_data_by_sample,
             key=lambda sample_token: (
+                scenes.get(samples.get(sample_token, {}).get("scene_token", ""), {}).get("name", ""),
                 samples.get(sample_token, {}).get("timestamp", 0),
                 sample_token,
             ),
@@ -179,6 +183,8 @@ class NuScenesAdapter:
             frame_group = str(scene_name or sample_token)
             for camera in camera_data_by_sample[sample_token]:
                 path = self.dataset_root / camera["filename"]
+                if not path.is_file():
+                    continue
                 from PIL import Image
 
                 with Image.open(path) as image:

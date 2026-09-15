@@ -1,0 +1,990 @@
+.ov2 {
+  --ov2-panel: var(--color-surface-1, #121b20);
+  --ov2-raised: var(--color-surface-2, #172329);
+  --ov2-hover: var(--color-surface-hover, #203138);
+  --ov2-line: var(--color-line, rgba(205, 235, 235, 0.1));
+  --ov2-line-strong: var(--color-line-strong, rgba(205, 235, 235, 0.18));
+  --ov2-text: var(--color-text, #c4d1d3);
+  --ov2-strong: var(--color-text-strong, #edf5f5);
+  --ov2-muted: var(--color-text-muted, #8fa3a8);
+  --ov2-faint: var(--color-text-faint, #62777d);
+  --ov2-brand: var(--color-brand, #56c9bf);
+  --ov2-brand-soft: var(--color-brand-soft, rgba(86, 201, 191, 0.11));
+  --ov2-success: var(--color-success, #63b78f);
+  --ov2-warning: var(--color-warning, #d2a35d);
+  --ov2-danger: var(--color-danger, #d9707a);
+  width: 100%;
+  max-width: 1760px;
+  margin: 0 auto;
+  color: var(--ov2-text);
+}
+
+.ov2 button,
+.ov2 img {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ov2-header {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.ov2-heading-row,
+.ov2-section-heading,
+.ov2-primary-action,
+.ov2-context-health,
+.ov2-text-action,
+.ov2-panel-total,
+.ov2-task-footer,
+.ov2-agent-strip > div,
+.ov2-agent-strip > button,
+.ov2-mobile-fallback,
+.ov2-empty-state {
+  display: flex;
+  align-items: center;
+}
+
+.ov2-heading-row {
+  min-height: 48px;
+  justify-content: space-between;
+  gap: 20px;
+}
+.ov2-heading-row h1 {
+  margin: 0;
+  color: var(--ov2-strong);
+  font-size: 24px;
+  font-weight: 680;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.ov2-heading-row p {
+  margin: 5px 0 0;
+  color: var(--ov2-muted);
+  font-size: 12px;
+}
+.ov2 .ov2-primary-action {
+  min-width: 190px;
+  height: 36px;
+  border-radius: 6px;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ov2 .ov2-primary-action svg:last-child {
+  margin-left: auto;
+}
+
+.ov2-context-bar {
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 1.45fr) minmax(130px, 0.75fr) minmax(210px, 1.2fr)
+    minmax(150px, 0.85fr) minmax(200px, 1.15fr);
+  min-height: 64px;
+  overflow: hidden;
+  border: 1px solid var(--ov2-line);
+  border-radius: 8px;
+  background: var(--ov2-panel);
+}
+.ov2-context-bar > div {
+  display: flex;
+  min-width: 0;
+  padding: 10px 14px;
+  border-right: 1px solid var(--ov2-line);
+  justify-content: center;
+  flex-direction: column;
+  gap: 3px;
+}
+.ov2-context-bar > div:last-child {
+  border-right: 0;
+}
+.ov2-context-bar small,
+.ov2-health-signals small,
+.ov2-agent-strip small {
+  color: var(--ov2-faint);
+  font-size: 12px;
+  line-height: 1.2;
+}
+.ov2-context-bar strong,
+.ov2-agent-strip strong {
+  overflow: hidden;
+  color: var(--ov2-strong);
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov2-context-bar > div > span:not(.ov2-context-icon) {
+  overflow: hidden;
+  color: var(--ov2-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov2-context-bar .ov2-context-main {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  justify-content: initial;
+}
+.ov2-context-main > span:last-child,
+.ov2-context-health > span,
+.ov2-health-signals span,
+.ov2-agent-strip span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+.ov2-context-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  place-items: center;
+  color: var(--ov2-brand);
+  background: var(--ov2-brand-soft);
+}
+.ov2-context-bar .ov2-context-health {
+  display: flex;
+  justify-content: flex-start;
+  flex-direction: row;
+  gap: 9px;
+}
+.ov2-context-health.is-warning > svg {
+  color: var(--ov2-warning);
+}
+.ov2-context-health.is-danger > svg {
+  color: var(--ov2-danger);
+}
+.ov2-context-health.is-success > svg {
+  color: var(--ov2-success);
+}
+
+.ov2-role-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border-block: 1px solid var(--ov2-line);
+}
+.ov2-role-facts > div {
+  display: flex;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 14px;
+  border-right: 1px solid var(--ov2-line);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ov2-role-facts > div:last-child {
+  border-right: 0;
+}
+.ov2-role-facts dt {
+  overflow: hidden;
+  color: var(--ov2-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov2-role-facts dd {
+  margin: 0;
+  color: var(--ov2-strong);
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.ov2-role-facts .is-warning dd {
+  color: var(--ov2-warning);
+}
+.ov2-role-facts .is-danger dd {
+  color: var(--ov2-danger);
+}
+.ov2-role-facts .is-success dd {
+  color: var(--ov2-success);
+}
+
+.ov2-mobile-fallback {
+  display: none;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 1px solid var(--ov2-line-strong);
+  border-radius: 8px;
+  gap: 10px;
+  color: var(--ov2-muted);
+  background: var(--ov2-panel);
+  font-size: 12px;
+}
+.ov2-mobile-fallback svg {
+  flex: 0 0 auto;
+  color: var(--ov2-brand);
+}
+.ov2-mobile-fallback span {
+  display: grid;
+  gap: 2px;
+}
+.ov2-mobile-fallback strong {
+  color: var(--ov2-strong);
+}
+
+.ov2-cockpit {
+  display: grid;
+  gap: 12px;
+}
+.ov2-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--ov2-line);
+  border-radius: 8px;
+  background: var(--ov2-panel);
+}
+.ov2-section-heading {
+  min-height: 58px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--ov2-line);
+  justify-content: space-between;
+  gap: 16px;
+}
+.ov2-section-heading h2 {
+  margin: 0;
+  color: var(--ov2-strong);
+  font-size: 14px;
+  font-weight: 680;
+  line-height: 1.25;
+}
+.ov2-section-heading p {
+  margin: 3px 0 0;
+  color: var(--ov2-muted);
+  font-size: 12px;
+}
+.ov2-text-action,
+.ov2-agent-strip > button {
+  min-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  justify-content: center;
+  gap: 4px;
+  color: var(--ov2-muted);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
+}
+.ov2-text-action:hover,
+.ov2-agent-strip > button:hover {
+  color: var(--ov2-brand);
+  background: var(--ov2-brand-soft);
+}
+.ov2-panel-total {
+  gap: 6px;
+  color: var(--ov2-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ov2-funnel {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  padding: 10px;
+}
+.ov2-funnel-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 64px;
+  padding: 8px 20px 8px 8px;
+  border: 0;
+  border-right: 1px solid var(--ov2-line);
+  align-items: center;
+  gap: 7px;
+  color: var(--ov2-text);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.ov2-funnel-stage:last-child {
+  border-right: 0;
+}
+.ov2-funnel-stage:hover {
+  background: var(--ov2-raised);
+}
+.ov2-funnel-stage:active {
+  background: var(--ov2-hover);
+}
+.ov2-stage-marker {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--ov2-line-strong);
+  border-radius: 50%;
+  place-items: center;
+  color: var(--ov2-muted);
+  background: var(--ov2-raised);
+}
+.ov2-funnel-stage:last-child .ov2-stage-marker {
+  color: var(--ov2-success);
+}
+.ov2-funnel-stage.has-attention .ov2-stage-marker {
+  color: var(--ov2-warning);
+}
+.ov2-funnel-stage > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+.ov2-funnel-stage small {
+  overflow: hidden;
+  color: var(--ov2-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov2-funnel-stage strong {
+  color: var(--ov2-strong);
+  font-family: var(--font-mono, monospace);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.ov2-stage-arrow {
+  position: absolute;
+  right: 3px;
+  color: var(--ov2-faint);
+}
+
+.ov2-analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  gap: 12px;
+}
+.ov2-heatmap {
+  display: grid;
+  grid-template-columns: 104px repeat(4, minmax(54px, 1fr));
+  padding: 12px 14px 8px;
+  gap: 6px;
+}
+.ov2-heatmap-row {
+  display: contents;
+}
+.ov2-heatmap-corner,
+.ov2-heatmap-head {
+  min-width: 0;
+  padding: 0 4px 3px;
+  color: var(--ov2-faint);
+  font-size: 12px;
+  text-align: center;
+}
+.ov2-heatmap-corner {
+  text-align: left;
+}
+.ov2-severity-label {
+  display: flex;
+  min-height: 36px;
+  padding: 0 4px;
+  align-items: center;
+  gap: 8px;
+  color: var(--ov2-muted);
+  font-size: 12px;
+}
+.ov2-severity-label > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ov2-faint);
+}
+.ov2-severity-label.is-critical > span {
+  background: var(--ov2-danger);
+}
+.ov2-severity-label.is-high > span {
+  background: var(--ov2-warning);
+}
+.ov2-severity-label.is-medium > span {
+  background: var(--color-info, #73a8ce);
+}
+.ov2-severity-label.is-low > span {
+  background: var(--ov2-muted);
+}
+.ov2-heat-cell {
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid var(--ov2-line);
+  border-radius: 4px;
+  color: var(--ov2-muted);
+  background: color-mix(
+    in srgb,
+    var(--ov2-brand) calc(var(--heat-level) * 9%),
+    var(--ov2-raised)
+  );
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+.ov2-heat-cell:hover {
+  border-color: var(--color-brand-line, rgba(86, 201, 191, 0.28));
+  transform: translateY(-1px);
+}
+.ov2-heat-cell:active {
+  transform: translateY(0);
+}
+.ov2-heat-cell span {
+  opacity: calc(0.55 + var(--heat-level) * 0.1);
+}
+.ov2-heat-legend {
+  display: flex;
+  padding: 0 14px 12px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  color: var(--ov2-faint);
+  font-size: 12px;
+}
+.ov2-heat-legend i {
+  width: 18px;
+  height: 5px;
+  background: var(--ov2-raised);
+}
+.ov2-heat-legend i:nth-of-type(2) {
+  background: color-mix(in srgb, var(--ov2-brand) 12%, var(--ov2-raised));
+}
+.ov2-heat-legend i:nth-of-type(3) {
+  background: color-mix(in srgb, var(--ov2-brand) 24%, var(--ov2-raised));
+}
+.ov2-heat-legend i:nth-of-type(4) {
+  background: color-mix(in srgb, var(--ov2-brand) 36%, var(--ov2-raised));
+}
+
+.ov2-health-score {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--ov2-strong);
+  font-family: var(--font-mono, monospace);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.ov2-health-score small {
+  color: var(--ov2-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+}
+.ov2-health-bar {
+  display: flex;
+  height: 12px;
+  margin: 18px 14px 12px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--ov2-raised);
+}
+.ov2-health-bar > span {
+  display: block;
+  min-width: 0;
+  height: 100%;
+}
+.ov2-health-bar > span + span {
+  border-left: 1px solid var(--ov2-panel);
+}
+.ov2-health-bar .is-approved,
+.ov2-health-legend .is-approved {
+  background: var(--ov2-success);
+}
+.ov2-health-bar .is-review,
+.ov2-health-legend .is-review {
+  background: var(--ov2-brand);
+}
+.ov2-health-bar .is-labeling,
+.ov2-health-legend .is-labeling {
+  background: var(--color-info, #73a8ce);
+}
+.ov2-health-bar .is-unassigned,
+.ov2-health-legend .is-unassigned {
+  background: var(--ov2-hover);
+}
+.ov2-health-legend {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 0 14px 14px;
+  gap: 8px;
+}
+.ov2-health-legend > div {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+.ov2-health-legend > div > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.ov2-health-legend small {
+  overflow: hidden;
+  color: var(--ov2-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov2-health-legend strong {
+  color: var(--ov2-strong);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ov2-health-signals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--ov2-line);
+}
+.ov2-health-signals > div {
+  display: flex;
+  min-width: 0;
+  min-height: 62px;
+  padding: 10px 12px;
+  border-right: 1px solid var(--ov2-line);
+  align-items: center;
+  gap: 9px;
+}
+.ov2-health-signals > div:last-child {
+  border-right: 0;
+}
+.ov2-health-signals svg {
+  flex: 0 0 auto;
+  color: var(--ov2-muted);
+}
+.ov2-health-signals strong {
+  overflow: hidden;
+  color: var(--ov2-strong);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ov2-agent-strip {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) minmax(0, 1fr) minmax(180px, 0.72fr)
+    auto;
+  min-height: 56px;
+  border: 1px solid var(--ov2-line);
+  border-radius: 8px;
+  background: var(--ov2-panel);
+}
+.ov2-agent-strip > div {
+  min-width: 0;
+  padding: 10px 14px;
+  border-right: 1px solid var(--ov2-line);
+  gap: 9px;
+}
+.ov2-agent-strip > div svg {
+  flex: 0 0 auto;
+  color: var(--ov2-muted);
+}
+.ov2-agent-strip > button {
+  margin: 9px;
+}
+
+.ov2-task-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.ov2-task {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  grid-template-rows: minmax(106px, auto) 36px;
+  min-width: 0;
+  min-height: 142px;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--ov2-line);
+  border-bottom: 1px solid var(--ov2-line);
+  color: var(--ov2-text);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.ov2-task:nth-child(3n) {
+  border-right: 0;
+}
+.ov2-task:nth-last-child(-n + 3) {
+  border-bottom: 0;
+}
+.ov2-task:hover {
+  background: var(--ov2-raised);
+}
+.ov2-task:active {
+  background: var(--ov2-hover);
+}
+.ov2-task-image {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 106px;
+  overflow: hidden;
+  border-right: 1px solid var(--ov2-line);
+  place-items: center;
+  color: var(--ov2-faint);
+  background: var(--ov2-raised);
+}
+.ov2-task-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ov2-task-image > span {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  max-width: calc(100% - 10px);
+  overflow: hidden;
+  padding: 2px 5px;
+  border-radius: 3px;
+  color: var(--ov2-strong);
+  background: rgba(9, 13, 16, 0.86);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov2-task-body {
+  display: flex;
+  min-width: 0;
+  padding: 10px 11px;
+  flex-direction: column;
+  gap: 5px;
+}
+.ov2-task-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ov2-severity-chip {
+  display: inline-flex;
+  min-height: 20px;
+  padding: 2px 6px;
+  border: 1px solid var(--ov2-line-strong);
+  border-radius: 4px;
+  align-items: center;
+  color: var(--ov2-muted);
+  font-size: 12px;
+}
+.ov2-severity-chip.is-critical {
+  color: var(--ov2-danger);
+  background: var(--color-danger-soft, rgba(217, 112, 122, 0.11));
+}
+.ov2-severity-chip.is-high {
+  color: var(--ov2-warning);
+  background: var(--color-warning-soft, rgba(210, 163, 93, 0.11));
+}
+.ov2-severity-chip.is-medium {
+  color: var(--color-info, #73a8ce);
+  background: var(--color-info-soft, rgba(115, 168, 206, 0.11));
+}
+.ov2-risk {
+  color: var(--ov2-muted);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ov2-task-body > strong {
+  overflow: hidden;
+  color: var(--ov2-strong);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov2-task-meta,
+.ov2-task-owner {
+  overflow: hidden;
+  color: var(--ov2-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov2-task-owner {
+  color: var(--ov2-faint);
+}
+.ov2-task-footer {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 0 10px;
+  border-top: 1px solid var(--ov2-line);
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ov2-faint);
+  font-size: 12px;
+}
+.ov2-task-footer > span,
+.ov2-task-footer > strong {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.ov2-task-footer > strong {
+  overflow: hidden;
+  margin-left: auto;
+  color: var(--ov2-text);
+  font-weight: 650;
+  text-overflow: ellipsis;
+}
+.ov2-empty-state {
+  min-height: 112px;
+  padding: 18px;
+  justify-content: center;
+  gap: 12px;
+  color: var(--ov2-muted);
+  font-size: 12px;
+}
+.ov2-empty-state > svg {
+  color: var(--ov2-success);
+}
+.ov2-empty-state > span {
+  display: grid;
+  gap: 3px;
+}
+.ov2-empty-state strong {
+  color: var(--ov2-strong);
+}
+
+@media (max-width: 1439px) {
+  .ov2-context-bar {
+    grid-template-columns:
+      minmax(210px, 1.35fr) minmax(120px, 0.7fr) minmax(190px, 1.1fr)
+      minmax(140px, 0.8fr) minmax(180px, 1fr);
+  }
+  .ov2-task {
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+  .ov2-health-signals {
+    grid-template-columns: 1fr;
+  }
+  .ov2-health-signals > div {
+    min-height: 46px;
+    border-right: 0;
+    border-bottom: 1px solid var(--ov2-line);
+  }
+  .ov2-health-signals > div:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 1199px) {
+  .ov2-context-bar {
+    grid-template-columns: 1.25fr 0.75fr 1fr;
+  }
+  .ov2-context-bar > div:nth-child(3) {
+    border-right: 0;
+  }
+  .ov2-context-bar > div:nth-child(n + 4) {
+    border-top: 1px solid var(--ov2-line);
+  }
+  .ov2-context-bar > div:nth-child(4) {
+    grid-column: span 1;
+  }
+  .ov2-context-bar > div:nth-child(5) {
+    grid-column: span 2;
+  }
+  .ov2-funnel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .ov2-funnel-stage:nth-child(3) {
+    border-right: 0;
+  }
+  .ov2-funnel-stage:nth-child(-n + 3) {
+    border-bottom: 1px solid var(--ov2-line);
+  }
+  .ov2-task-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov2-task:nth-child(3n) {
+    border-right: 1px solid var(--ov2-line);
+  }
+  .ov2-task:nth-child(2n) {
+    border-right: 0;
+  }
+  .ov2-task:nth-last-child(-n + 3) {
+    border-bottom: 1px solid var(--ov2-line);
+  }
+  .ov2-task:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+  .ov2-agent-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ov2-agent-strip > div:nth-child(2) {
+    border-right: 0;
+  }
+  .ov2-agent-strip > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--ov2-line);
+  }
+}
+
+@media (max-width: 1023px) {
+  .ov2-heading-row {
+    align-items: flex-start;
+  }
+  .ov2-role-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov2-role-facts > div:nth-child(2) {
+    border-right: 0;
+  }
+  .ov2-role-facts > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--ov2-line);
+  }
+  .ov2-analysis-grid {
+    grid-template-columns: 1fr;
+  }
+  .ov2-health-signals {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .ov2-health-signals > div {
+    min-height: 56px;
+    border-right: 1px solid var(--ov2-line);
+    border-bottom: 0;
+  }
+  .ov2-health-signals > div:last-child {
+    border-right: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .ov2 {
+    padding-inline: 0;
+  }
+  .ov2-header {
+    gap: 10px;
+  }
+  .ov2-heading-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .ov2-heading-row h1 {
+    font-size: 20px;
+  }
+  .ov2 .ov2-primary-action {
+    width: 100%;
+  }
+  .ov2-context-bar {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ov2-context-bar > div {
+    min-height: 58px;
+    border-top: 1px solid var(--ov2-line);
+  }
+  .ov2-context-bar > div:nth-child(1),
+  .ov2-context-bar > div:nth-child(2) {
+    border-top: 0;
+  }
+  .ov2-context-bar > div:nth-child(2n) {
+    border-right: 0;
+  }
+  .ov2-context-bar > div:nth-child(3) {
+    border-right: 1px solid var(--ov2-line);
+  }
+  .ov2-context-bar > div:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+  .ov2-role-facts {
+    grid-template-columns: 1fr;
+  }
+  .ov2-role-facts > div {
+    min-height: 44px;
+    border-right: 0;
+    border-bottom: 1px solid var(--ov2-line);
+  }
+  .ov2-role-facts > div:last-child {
+    border-bottom: 0;
+  }
+  .ov2-mobile-fallback {
+    display: flex;
+    margin-bottom: 12px;
+  }
+  .ov2-section-heading {
+    min-height: 56px;
+  }
+  .ov2-funnel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov2-funnel-stage:nth-child(3) {
+    border-right: 1px solid var(--ov2-line);
+  }
+  .ov2-funnel-stage:nth-child(2n) {
+    border-right: 0;
+  }
+  .ov2-funnel-stage:nth-child(-n + 4) {
+    border-bottom: 1px solid var(--ov2-line);
+  }
+  .ov2-heatmap {
+    grid-template-columns: 82px repeat(4, minmax(36px, 1fr));
+    padding-inline: 8px;
+    gap: 4px;
+  }
+  .ov2-health-legend {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov2-health-signals {
+    grid-template-columns: 1fr;
+  }
+  .ov2-health-signals > div {
+    min-height: 48px;
+    border-right: 0;
+    border-bottom: 1px solid var(--ov2-line);
+  }
+  .ov2-health-signals > div:last-child {
+    border-bottom: 0;
+  }
+  .ov2-agent-strip {
+    grid-template-columns: 1fr;
+  }
+  .ov2-agent-strip > div {
+    min-height: 52px;
+    border-right: 0;
+    border-bottom: 1px solid var(--ov2-line);
+  }
+  .ov2-task-strip {
+    grid-template-columns: 1fr;
+  }
+  .ov2-task {
+    grid-template-columns: 88px minmax(0, 1fr);
+    border-right: 0;
+    border-bottom: 1px solid var(--ov2-line);
+  }
+  .ov2-task:nth-child(2n),
+  .ov2-task:nth-child(3n),
+  .ov2-task:nth-last-child(-n + 2) {
+    border-bottom: 1px solid var(--ov2-line);
+  }
+  .ov2-task:last-child {
+    border-bottom: 0;
+  }
+  .ov2-empty-state {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .ov2 button {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ov2 *,
+  .ov2 *::before,
+  .ov2 *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

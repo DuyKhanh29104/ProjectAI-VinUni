@@ -72,6 +72,17 @@ def test_production_requires_authentication() -> None:
         Settings(app_env="production", auth_enabled=False, _env_file=None)
 
 
+def test_default_runtime_uses_cloud_dataset_metadata() -> None:
+    settings = Settings(app_env="test", _env_file=None)
+
+    assert settings.dataset_backend == "database"
+    assert (settings.dataset_id, settings.dataset_version, settings.dataset_default_split) == (
+        "nuscenes",
+        "v1.0-mini",
+        "product",
+    )
+
+
 def test_production_rejects_local_cors_origin() -> None:
     with pytest.raises(ValidationError, match="local origins"):
         Settings(

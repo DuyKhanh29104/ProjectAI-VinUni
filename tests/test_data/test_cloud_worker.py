@@ -52,7 +52,7 @@ def _stage_kitti_raw_archives(tmp_path: Path, storage: LocalObjectStorageClient,
             str(archive_path),
             bucket,
             f"raw/official/kitti/object/archives/{archive_name}",
-            ExtraArgs={"ContentType": "application/zip"},
+            content_type="application/zip",
         )
 
 
@@ -90,7 +90,7 @@ def _stage_multi_frame_kitti_raw_archives(tmp_path: Path, storage: LocalObjectSt
             str(archive_path),
             bucket,
             f"raw/official/kitti/object/archives/{archive_name}",
-            ExtraArgs={"ContentType": "application/zip"},
+            content_type="application/zip",
         )
 
 
@@ -117,8 +117,7 @@ def _stage_nuscenes_trainval_archives(tmp_path: Path, storage: LocalObjectStorag
         {"token": "sample-2", "timestamp": 2, "scene_token": "scene-token"},
     ]
     sensors = [
-        {"token": f"sensor-{channel}", "channel": channel, "modality": "camera"}
-        for channel in camera_channels
+        {"token": f"sensor-{channel}", "channel": channel, "modality": "camera"} for channel in camera_channels
     ] + [{"token": "sensor-LIDAR_TOP", "channel": "LIDAR_TOP", "modality": "lidar"}]
     calibrated_sensor = [
         {
@@ -192,7 +191,7 @@ def _stage_nuscenes_trainval_archives(tmp_path: Path, storage: LocalObjectStorag
         str(meta_archive),
         bucket,
         "raw/official/nuscenes/v1.0-trainval/archives/v1.0-trainval_meta.tgz",
-        ExtraArgs={"ContentType": "application/gzip"},
+        content_type="application/gzip",
     )
     for index in range(1, 11):
         archive_name = f"v1.0-trainval{index:02d}_blobs.tgz"
@@ -202,13 +201,13 @@ def _stage_nuscenes_trainval_archives(tmp_path: Path, storage: LocalObjectStorag
             str(archive_path),
             bucket,
             f"raw/official/nuscenes/v1.0-trainval/archives/{archive_name}",
-            ExtraArgs={"ContentType": "application/gzip"},
+            content_type="application/gzip",
         )
 
 
 def test_official_kitti_adapter_emits_canonical_cloud_frame_path(tmp_path: Path) -> None:
     storage = LocalObjectStorageClient(tmp_path / "objects")
-    storage.create_bucket(Bucket="bucket")
+    storage.create_bucket("bucket")
     _stage_kitti_raw_archives(tmp_path, storage, "bucket")
     worker = CloudIngestionWorker(
         settings=IngestionSettings(gcs_bucket="bucket", _env_file=None),
@@ -226,7 +225,7 @@ def test_official_kitti_adapter_emits_canonical_cloud_frame_path(tmp_path: Path)
 
 def test_cloud_worker_normalizes_kitti_raw_archives_from_gcs_style_storage(tmp_path: Path) -> None:
     storage = LocalObjectStorageClient(tmp_path / "objects")
-    storage.create_bucket(Bucket="bucket")
+    storage.create_bucket("bucket")
     _stage_kitti_raw_archives(tmp_path, storage, "bucket")
     worker = CloudIngestionWorker(
         settings=IngestionSettings(gcs_bucket="bucket", _env_file=None),
@@ -238,10 +237,7 @@ def test_cloud_worker_normalizes_kitti_raw_archives_from_gcs_style_storage(tmp_p
     worker.normalize_to_staging(request)
     report = worker.validate(request)
 
-    frame_key = (
-        "datasets/staging/run/official/kitti/object/smoke/frames/"
-        "sequence-default/000000/CAM_FRONT.png"
-    )
+    frame_key = "datasets/staging/run/official/kitti/object/smoke/frames/sequence-default/000000/CAM_FRONT.png"
     manifest_key = "datasets/staging/run/official/kitti/object/smoke/manifests/ingest_manifest.json"
     assert storage.object_exists("bucket", frame_key)
     assert storage.object_exists("bucket", manifest_key)
@@ -253,7 +249,7 @@ def test_cloud_worker_normalizes_kitti_raw_archives_from_gcs_style_storage(tmp_p
 
 def test_cloud_worker_normalizes_kitti_lidar_artifacts_for_3d_smoke(tmp_path: Path) -> None:
     storage = LocalObjectStorageClient(tmp_path / "objects")
-    storage.create_bucket(Bucket="bucket")
+    storage.create_bucket("bucket")
     _stage_kitti_raw_archives(tmp_path, storage, "bucket")
     worker = CloudIngestionWorker(
         settings=IngestionSettings(gcs_bucket="bucket", _env_file=None),
@@ -287,7 +283,7 @@ def test_cloud_worker_normalizes_kitti_lidar_artifacts_for_3d_smoke(tmp_path: Pa
 
 def test_cloud_worker_streams_only_selected_kitti_frames_without_archive_materialization(tmp_path: Path) -> None:
     storage = LocalObjectStorageClient(tmp_path / "objects")
-    storage.create_bucket(Bucket="bucket")
+    storage.create_bucket("bucket")
     _stage_multi_frame_kitti_raw_archives(tmp_path, storage, "bucket")
     scratch_root = tmp_path / "scratch"
     worker = CloudIngestionWorker(
@@ -315,7 +311,7 @@ def test_cloud_worker_streams_only_selected_kitti_frames_without_archive_materia
 
 def test_cloud_worker_normalizes_nuscenes_trainval_multi_archive_with_lidar(tmp_path: Path) -> None:
     storage = LocalObjectStorageClient(tmp_path / "objects")
-    storage.create_bucket(Bucket="bucket")
+    storage.create_bucket("bucket")
     _stage_nuscenes_trainval_archives(tmp_path, storage, "bucket")
     worker = CloudIngestionWorker(
         settings=IngestionSettings(gcs_bucket="bucket", _env_file=None),
@@ -349,12 +345,21 @@ def test_cloud_worker_normalizes_nuscenes_trainval_multi_archive_with_lidar(tmp_
         "datasets/staging/nuscenes-trainval-smoke/official/nuscenes/v1.0-trainval/smoke/"
         "pointclouds/scene-0001/sample-1/LIDAR_TOP.pcd.bin",
     )
-    assert not (tmp_path / "scratch" / "nuscenes-trainval-smoke" / "dataset" / "nuscenes" / "samples" / "CAM_FRONT" / "sample-2.jpg").exists()
+    assert not (
+        tmp_path
+        / "scratch"
+        / "nuscenes-trainval-smoke"
+        / "dataset"
+        / "nuscenes"
+        / "samples"
+        / "CAM_FRONT"
+        / "sample-2.jpg"
+    ).exists()
 
 
 def test_cloud_worker_rejects_missing_gcs_raw_archives(tmp_path: Path) -> None:
     storage = LocalObjectStorageClient(tmp_path / "objects")
-    storage.create_bucket(Bucket="bucket")
+    storage.create_bucket("bucket")
     worker = CloudIngestionWorker(
         settings=IngestionSettings(gcs_bucket="bucket", _env_file=None),
         storage_client=storage,
@@ -370,7 +375,7 @@ def test_cloud_worker_stage_requires_kitti_secret_urls(tmp_path: Path, monkeypat
     for name in ("KITTI_IMAGE_2_URL", "KITTI_LABEL_2_URL", "KITTI_CALIB_URL", "KITTI_VELODYNE_URL"):
         monkeypatch.delenv(name, raising=False)
     storage = LocalObjectStorageClient(tmp_path / "objects")
-    storage.create_bucket(Bucket="bucket")
+    storage.create_bucket("bucket")
     worker = CloudIngestionWorker(
         settings=IngestionSettings(gcs_bucket="bucket", _env_file=None),
         storage_client=storage,
@@ -382,13 +387,18 @@ def test_cloud_worker_stage_requires_kitti_secret_urls(tmp_path: Path, monkeypat
         worker.stage_raw(request)
 
 
-def test_cloud_worker_2d_kitti_stage_does_not_require_lidar_url(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cloud_worker_2d_kitti_stage_does_not_require_lidar_url(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     for name in ("KITTI_IMAGE_2_URL", "KITTI_LABEL_2_URL", "KITTI_CALIB_URL", "KITTI_VELODYNE_URL"):
         monkeypatch.delenv(name, raising=False)
     for archive_name in ("data_object_image_2.zip", "data_object_label_2.zip", "data_object_calib.zip"):
-        monkeypatch.setenv(f"KITTI_{archive_name.removeprefix('data_object_').removesuffix('.zip').upper()}_URL", f"file:///{archive_name}")
+        monkeypatch.setenv(
+            f"KITTI_{archive_name.removeprefix('data_object_').removesuffix('.zip').upper()}_URL",
+            f"file:///{archive_name}",
+        )
     storage = LocalObjectStorageClient(tmp_path / "objects")
-    storage.create_bucket(Bucket="bucket")
+    storage.create_bucket("bucket")
     worker = CloudIngestionWorker(
         settings=IngestionSettings(gcs_bucket="bucket", _env_file=None),
         storage_client=storage,
@@ -401,7 +411,7 @@ def test_cloud_worker_2d_kitti_stage_does_not_require_lidar_url(tmp_path: Path, 
 
 def test_cloud_worker_lidar_request_includes_velodyne_archive(tmp_path: Path) -> None:
     storage = LocalObjectStorageClient(tmp_path / "objects")
-    storage.create_bucket(Bucket="bucket")
+    storage.create_bucket("bucket")
     worker = CloudIngestionWorker(
         settings=IngestionSettings(gcs_bucket="bucket", _env_file=None),
         storage_client=storage,
@@ -421,7 +431,7 @@ def test_cloud_worker_lidar_request_includes_velodyne_archive(tmp_path: Path) ->
 
 def test_cloud_worker_can_limit_nuscenes_trainval_blob_archives_for_smoke(tmp_path: Path) -> None:
     storage = LocalObjectStorageClient(tmp_path / "objects")
-    storage.create_bucket(Bucket="bucket")
+    storage.create_bucket("bucket")
     worker = CloudIngestionWorker(
         settings=IngestionSettings(gcs_bucket="bucket", _env_file=None),
         storage_client=storage,
@@ -450,10 +460,20 @@ def test_cloud_worker_can_limit_nuscenes_trainval_blob_archives_for_smoke(tmp_pa
     assert len(worker.raw_archive_keys(full_request)) == 11
 
 
+def test_cloud_ingestion_request_defaults_to_product_split() -> None:
+    request = CloudIngestionRequest(dataset_type="nuscenes")
+
+    assert request.split == "product"
+
+
 def test_cloud_worker_flags_invalid_nuscenes_camera_view_sets() -> None:
     images = [
-        ImageMetadata("front", "samples/CAM_FRONT/keyframe.jpg", 100, 80, storage_filename="scene/sample/CAM_FRONT.jpg"),
-        ImageMetadata("extra", "sweeps/CAM_FRONT/sweep.jpg", 100, 80, storage_filename="scene/sample/CAM_FRONT_SWEEP.jpg"),
+        ImageMetadata(
+            "front", "samples/CAM_FRONT/keyframe.jpg", 100, 80, storage_filename="scene/sample/CAM_FRONT.jpg"
+        ),
+        ImageMetadata(
+            "extra", "sweeps/CAM_FRONT/sweep.jpg", 100, 80, storage_filename="scene/sample/CAM_FRONT_SWEEP.jpg"
+        ),
     ]
 
     invalid = CloudIngestionWorker._invalid_nuscenes_camera_sets(images)
@@ -463,7 +483,7 @@ def test_cloud_worker_flags_invalid_nuscenes_camera_view_sets() -> None:
 
 def test_cloud_worker_publish_copies_staging_to_canonical_without_database(tmp_path: Path) -> None:
     storage = LocalObjectStorageClient(tmp_path / "objects")
-    storage.create_bucket(Bucket="bucket")
+    storage.create_bucket("bucket")
     _stage_kitti_raw_archives(tmp_path, storage, "bucket")
     worker = CloudIngestionWorker(
         settings=IngestionSettings(gcs_bucket="bucket", _env_file=None),
@@ -475,10 +495,7 @@ def test_cloud_worker_publish_copies_staging_to_canonical_without_database(tmp_p
     worker.normalize_to_staging(request)
     worker.publish(request)
 
-    canonical_key = (
-        "datasets/official/kitti/object/smoke/frames/"
-        "sequence-default/000000/CAM_FRONT.png"
-    )
+    canonical_key = "datasets/official/kitti/object/smoke/frames/sequence-default/000000/CAM_FRONT.png"
     result_key = "ops/ingestion-runs/run/result.json"
     assert storage.object_exists("bucket", canonical_key)
     assert json.loads((tmp_path / "objects" / "bucket" / result_key).read_text())["published"] is True
@@ -559,7 +576,7 @@ def test_cloud_worker_publish_removes_stale_database_frames_for_canonical_prefix
 
 def test_cloud_worker_publish_resume_still_syncs_database_metadata(tmp_path: Path) -> None:
     storage = LocalObjectStorageClient(tmp_path / "objects")
-    storage.create_bucket(Bucket="bucket")
+    storage.create_bucket("bucket")
     _stage_kitti_raw_archives(tmp_path, storage, "bucket")
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
@@ -584,7 +601,7 @@ def test_cloud_worker_publish_resume_still_syncs_database_metadata(tmp_path: Pat
         str(result_path),
         "bucket",
         "ops/ingestion-runs/kitti-full/result.json",
-        ExtraArgs={"ContentType": "application/json"},
+        content_type="application/json",
     )
 
     worker.publish(request)
@@ -595,3 +612,16 @@ def test_cloud_worker_publish_resume_still_syncs_database_metadata(tmp_path: Pat
     assert len(rows) == 1
     assert rows[0].source_image_id == "kitti:000000"
     assert rows[0].storage_key == "datasets/official/kitti/object/full/frames/sequence-default/000000/CAM_FRONT.png"
+
+
+def test_incremental_kitti_selection_skips_existing_frames():
+    import zipfile
+    from io import BytesIO
+
+    archive = BytesIO()
+    with zipfile.ZipFile(archive, "w") as zipped:
+        for image_id in ("000000", "000001", "000002"):
+            zipped.writestr(f"training/image_2/{image_id}.png", b"fixture")
+    archive.seek(0)
+    selected = CloudIngestionWorker._selected_kitti_frame_ids_from_zip(archive, 1, {"000000"})
+    assert selected == {"000001"}

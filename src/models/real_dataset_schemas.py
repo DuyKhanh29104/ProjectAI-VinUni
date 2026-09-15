@@ -3,10 +3,11 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, computed_field, model_validator
 
 from src.models.agent_schemas import LabelQAReport
 from src.models.base_schemas import ApiModel
+from src.services.yolo import canonical_class_names, canonical_detection_class
 
 
 class RealDatasetBBox(ApiModel):
@@ -23,6 +24,15 @@ class RealDatasetLabel(ApiModel):
     track_id: str | None = None
     attributes: dict[str, bool | float | int | str] = Field(default_factory=dict)
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def normalized_class_name(self) -> str | None:
+        """Tên class theo taxonomy YOLO/COCO để hiển thị, ``None`` nếu YOLO không có class này.
+
+        ``class_name`` gốc vẫn là nguồn sự thật cho annotation editor.
+        """
+        return canonical_detection_class(self.class_name)
+
     @model_validator(mode="after")
     def has_positive_area(self) -> "RealDatasetLabel":
         if self.bbox.x2 <= self.bbox.x1 or self.bbox.y2 <= self.bbox.y1:
@@ -35,6 +45,11 @@ class RealDatasetPrediction(ApiModel):
     class_name: str
     bbox: RealDatasetBBox
     confidence: float
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def normalized_class_name(self) -> str | None:
+        return canonical_detection_class(self.class_name)
 
 
 class RealDatasetMatch(ApiModel):
@@ -73,6 +88,11 @@ class RealDatasetImageList(ApiModel):
     available_datasets: list[str] = Field(default_factory=list)
     classes: list[str]
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def normalized_classes(self) -> list[str]:
+        return canonical_class_names(self.classes)
+
 
 class RealDatasetFrameSample(ApiModel):
     id: str
@@ -97,9 +117,15 @@ class RealDatasetFrameSampleList(ApiModel):
     available_datasets: list[str] = Field(default_factory=list)
     classes: list[str]
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def normalized_classes(self) -> list[str]:
+        return canonical_class_names(self.classes)
+
 
 class RealDatasetEvaluation(ApiModel):
     evaluation_id: str
+    annotation_revision: int = Field(default=0, ge=0)
     dataset_id: str
     dataset_version: str
     model_name: str
@@ -113,6 +139,34 @@ class RealDatasetEvaluation(ApiModel):
     persisted: bool = False
     created_case_ids: list[str] = Field(default_factory=list)
     inference_mode: Literal["yolo"] = "yolo"
+
+
+class RealDatasetBatchEvaluationRequest(ApiModel):
+    image_ids: list[str] = Field(min_length=1, max_length=100)
+    force: bool = False
+    persist: bool = True
+
+    @model_validator(mode="after")
+    def has_image_ids(self) -> "RealDatasetBatchEvaluationRequest":
+        normalized = [image_id.strip() for image_id in self.image_ids if image_id.strip()]
+        if not normalized:
+            raise ValueError("image_ids must include at least one image id")
+        self.image_ids = list(dict.fromkeys(normalized))
+        return self
+
+
+class RealDatasetBatchEvaluationResult(ApiModel):
+    image_id: str
+    evaluation: RealDatasetEvaluation | None = None
+    error: str | None = None
+
+
+class RealDatasetBatchEvaluation(ApiModel):
+    count: int
+    succeeded: int
+    failed: int
+    inference_batch_used: bool = False
+    results: list[RealDatasetBatchEvaluationResult]
 
 
 class RealDatasetError(ApiModel):

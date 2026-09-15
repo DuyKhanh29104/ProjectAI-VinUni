@@ -8,7 +8,6 @@ import pytest
 import pytest_asyncio
 from alembic import command
 from alembic.config import Config
-from dotenv import load_dotenv
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
@@ -57,7 +56,6 @@ def postgres_test_database() -> Iterator[PostgresTestDatabase]:
             "PostgreSQL tests cannot share one TEST_DATABASE_URL across pytest-xdist workers; "
             "run without xdist or provision one test database per worker."
         )
-    load_dotenv(PROJECT_ROOT / ".env", override=False)
     raw_url = os.getenv("TEST_DATABASE_URL")
     if not raw_url:
         raise pytest.UsageError(

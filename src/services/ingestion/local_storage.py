@@ -4,26 +4,30 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
-from typing import Any, BinaryIO
+from typing import BinaryIO
 
 
 class LocalObjectStorageClient:
-    """Small boto3-compatible subset that stores objects beneath a local root."""
+    """Object-storage operations backed by a local directory."""
 
     def __init__(self, root: Path) -> None:
         self.root = Path(root)
 
-    def head_bucket(self, **kwargs: Any) -> None:
-        if not (self.root / kwargs["Bucket"]).is_dir():
-            from botocore.exceptions import ClientError  # type: ignore[import-untyped]
+    def bucket_exists(self, bucket: str) -> bool:
+        return (self.root / bucket).is_dir()
 
-            raise ClientError({"Error": {"Code": "404"}}, "HeadBucket")
+    def create_bucket(self, bucket: str) -> None:
+        (self.root / bucket).mkdir(parents=True, exist_ok=True)
 
-    def create_bucket(self, **kwargs: Any) -> None:
-        (self.root / kwargs["Bucket"]).mkdir(parents=True, exist_ok=True)
-
-    def upload_file(self, filename: str, bucket: str, key: str, **kwargs: Any) -> None:
-        del kwargs
+    def upload_file(
+        self,
+        filename: str,
+        bucket: str,
+        key: str,
+        *,
+        content_type: str | None = None,
+    ) -> None:
+        del content_type
         destination = self.root / bucket / key
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(filename, destination)

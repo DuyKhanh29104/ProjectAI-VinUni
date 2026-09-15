@@ -26,6 +26,8 @@ def compute_metrics(matches: list[dict], unmatched_gt: list[dict], unmatched_pre
         "f1": round(f1, 4),
         "avg_iou": round(avg_iou, 4),
     }
+
+
 async def compute_metrics_node(state: LabelQAState) -> dict:
     matches = state.get("matches", [])
     unmatched_gt = state.get("unmatched_gt", [])

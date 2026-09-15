@@ -77,3 +77,4 @@ async def test_agent_keeps_review_result_when_llm_is_not_configured(monkeypatch:
     assert result["qa_report"]["status"] == "needs_review"
     assert result["qa_report"]["issues"][0]["issue_type"] == "wrong_class"
     assert "khác class" in result["qa_report"]["issues"][0]["explanation"]
+    assert "LLM giải thích bị lỗi" in result["qa_report"]["summary"]

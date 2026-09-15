@@ -390,7 +390,7 @@ curl "http://127.0.0.1:8000/api/v1/dataset/images?split=smoke&limit=2"
 Check QA queue:
 
 ```bash
-curl "http://127.0.0.1:8000/api/v1/qa-cases?limit=200&sourceType=local_dataset"
+curl "http://127.0.0.1:8000/api/v1/qa-cases?limit=200&split=smoke"
 ```
 
 Check through Vite proxy:

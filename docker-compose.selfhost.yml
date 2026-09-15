@@ -1,0 +1,76 @@
+name: label-guardian-selfhost
+
+services:
+  proxy:
+    image: caddy:2.9-alpine
+    profiles: ["internet"]
+    env_file:
+      - ${SELFHOST_ENV_FILE:-/opt/label-guardian/.env.production}
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+    ports:
+      - "${HTTP_BIND_ADDRESS:-0.0.0.0}:80:80"
+      - "${HTTPS_BIND_ADDRESS:-0.0.0.0}:443:443"
+    volumes:
+      - ./Caddyfile.selfhost:/etc/caddy/Caddyfile:ro,Z
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  backend:
+    image: label-guardian-backend:${IMAGE_TAG:-selfhost}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ${SELFHOST_ENV_FILE:-/opt/label-guardian/.env.production}
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      PORT: 8000
+      RUN_MIGRATIONS: "false"
+      DATASET_BACKEND: database
+      DATASET_ID: ${DATASET_ID:-nuscenes}
+      DATASET_VERSION: ${DATASET_VERSION:-v1.0-trainval}
+      DATASET_DEFAULT_SPLIT: ${DATASET_DEFAULT_SPLIT:-trainval-full}
+      LABEL_GUARDIAN_GCS_CACHE_ROOT: /app/data
+    volumes:
+      - ${SELFHOST_DATA_DIR:-/opt/label-guardian/data}:/app/data:Z
+      - ${SELFHOST_GCLOUD_CONFIG_DIR:-/opt/label-guardian/gcloud}:/home/appuser/.config/gcloud:ro,Z
+    expose:
+      - "8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  backend-migrate:
+    image: label-guardian-backend:${IMAGE_TAG:-selfhost}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["migrate"]
+    env_file:
+      - ${SELFHOST_ENV_FILE:-/opt/label-guardian/.env.production}
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      RUN_MIGRATIONS: "false"
+      DATASET_BACKEND: database
+      DATASET_ID: ${DATASET_ID:-nuscenes}
+      DATASET_VERSION: ${DATASET_VERSION:-v1.0-trainval}
+      DATASET_DEFAULT_SPLIT: ${DATASET_DEFAULT_SPLIT:-trainval-full}
+      LABEL_GUARDIAN_GCS_CACHE_ROOT: /app/data
+    volumes:
+      - ${SELFHOST_DATA_DIR:-/opt/label-guardian/data}:/app/data:Z
+      - ${SELFHOST_GCLOUD_CONFIG_DIR:-/opt/label-guardian/gcloud}:/home/appuser/.config/gcloud:ro,Z
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    restart: "no"
+volumes:
+  caddy_data:
+  caddy_config:

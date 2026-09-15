@@ -365,7 +365,7 @@ def _upload_downloaded_archives(
             str(archive_path),
             settings.bucket_name,
             object_key,
-            ExtraArgs={"ContentType": "application/octet-stream"},
+            content_type="application/octet-stream",
         )
         uploads += 1
     return uploads
