@@ -1532,14 +1532,14 @@ async def evaluate_real_dataset_images_batch(
                         images=[item.image_reference for item in chunk if item.image_reference is not None]
                     )
                 )
-            except Exception as error:
+            except Exception:
                 for item in chunk:
-                    inference_errors[item.image_id] = f"Batch inference failed: {error}"
+                    inference_errors[item.image_id] = "Batch inference failed for this image."
                 continue
             inference_batch_used = True
             for item in batch_response.results:
                 if item.error:
-                    inference_errors[item.image.image_id] = item.error
+                    inference_errors[item.image.image_id] = "Inference failed for this image."
                     continue
                 inference_responses[item.image.image_id] = InferenceResponse(
                     model_name=batch_response.model_name,

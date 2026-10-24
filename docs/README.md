@@ -29,6 +29,7 @@ Trang này là mục lục tài liệu. Không lặp lại cùng một contract 
 | [`SUPABASE_DEVELOPMENT.md`](SUPABASE_DEVELOPMENT.md) | Supabase Auth/PostgreSQL trong development |
 | [`GOLDEN_DATASET.md`](GOLDEN_DATASET.md) | Dataset, GCS layout và provenance |
 | [`VIN_SLAVE_INTEGRATION.md`](VIN_SLAVE_INTEGRATION.md) | Nguồn commit, quyết định giữ/bỏ và kiểm tra tích hợp |
+| [`REPOSITORY_COMPARISON.md`](REPOSITORY_COMPARISON.md) | Đánh giá ba repo ngày 2026-10-24 và các cải tiến được chọn |
 
 ## Ingestion và hạ tầng
 

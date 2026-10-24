@@ -1,5 +1,6 @@
 """HTTP client used by the App Service to call the detector runtime."""
 
+from collections import Counter
 from typing import Protocol, cast
 
 import httpx
@@ -8,6 +9,7 @@ from pydantic import ValidationError
 from src.models.inference_schemas import (
     InferenceBatchRequest,
     InferenceBatchResponse,
+    InferenceImageReference,
     InferenceRequest,
     InferenceResponse,
 )
@@ -17,6 +19,18 @@ INFERENCE_AUTH_HEADER = "X-Label-Guardian-Inference-Token"
 
 class InferenceClientError(RuntimeError):
     """Raised when the remote inference service cannot return detections."""
+
+
+def _image_identity(image: InferenceImageReference) -> tuple[str | None, ...]:
+    return (image.dataset_id, image.dataset_version, image.split, image.image_id, image.bucket, image.object_key)
+
+
+def validate_batch_response(request: InferenceBatchRequest, response: InferenceBatchResponse) -> None:
+    """Require exactly one result for each requested image, regardless of order."""
+    requested = Counter(_image_identity(image) for image in request.images)
+    returned = Counter(_image_identity(item.image) for item in response.results)
+    if requested != returned:
+        raise InferenceClientError("Inference batch returned mismatched image references.")
 
 
 class InferenceClient(Protocol):
@@ -69,6 +83,8 @@ class RemoteInferenceClient:
     async def detect_batch(self, request: InferenceBatchRequest) -> InferenceBatchResponse:
         response_payload = await self._post(self.batch_endpoint, request)
         try:
-            return cast(InferenceBatchResponse, InferenceBatchResponse.model_validate(response_payload))
+            response = cast(InferenceBatchResponse, InferenceBatchResponse.model_validate(response_payload))
         except ValidationError as error:
             raise InferenceClientError("Inference service returned an invalid response contract.") from error
+        validate_batch_response(request, response)
+        return response
